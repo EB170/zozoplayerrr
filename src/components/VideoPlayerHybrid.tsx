@@ -103,8 +103,8 @@ export const VideoPlayerHybrid = ({
   const healthCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const maintenanceIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mpegtsStallRecoveryAttemptsRef = useRef(0); // New ref for MPEG-TS stall recovery attempts
-  const isInitializingRef = useRef(false); // New ref to prevent multiple initializations
-
+  
+  const [isInitializing, setIsInitializing] = useState(false); // State to manage overall initialization
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [volume, setVolume] = useState(1);
@@ -235,7 +235,7 @@ export const VideoPlayerHybrid = ({
         description: "Le flux est actuellement indisponible",
         duration: 5000
       });
-      isInitializingRef.current = false; // Allow new initialization attempts
+      setIsInitializing(false); // Fatal failure, reset initialization state
       return;
     }
     const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
@@ -244,7 +244,7 @@ export const VideoPlayerHybrid = ({
     retryTimeoutRef.current = setTimeout(() => {
       retryFn();
     }, delay);
-  }, []);
+  }, [setIsInitializing]); // setIsInitializing is a stable setter, safe to add
 
   // 3. getOptimalBufferSize
   const getOptimalBufferSize = useCallback(() => {
@@ -259,7 +259,7 @@ export const VideoPlayerHybrid = ({
   const createMpegtsPlayer = useCallback((urlToLoad: string) => {
     const video = videoRef.current;
     if (!video) {
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
     
@@ -283,7 +283,7 @@ export const VideoPlayerHybrid = ({
       console.error('CRITICAL ERROR: Failed to get proxied URL for MPEG-TS:', error.message);
       setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
       setIsLoading(false);
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
@@ -291,7 +291,7 @@ export const VideoPlayerHybrid = ({
     if (typeof finalUrl !== 'string' || !finalUrl) {
       console.error('CRITICAL ERROR: finalUrl is NOT a string or is empty before mpegts.createPlayer:', finalUrl);
       setErrorMessage('Erreur interne critique: URL du flux MPEG-TS invalide ou vide.');
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
@@ -504,31 +504,31 @@ export const VideoPlayerHybrid = ({
             description: `MPEG-TS • ${networkSpeed}`,
             duration: 2000
           });
-          isInitializingRef.current = false; // Initialization complete
+          setIsInitializing(false); // Initialization complete
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
             scheduleRetry(() => createMpegtsPlayer(urlToLoad));
           } else {
-            isInitializingRef.current = false; // Allow new initialization attempts
+            setIsInitializing(false); // Allow new initialization attempts
           }
         });
       }, 500);
     } else {
-      isInitializingRef.current = false; // Initialization complete even if not autoplaying
+      setIsInitializing(false); // Initialization complete even if not autoplaying
     }
-  }, [autoPlay, cleanup, scheduleRetry, getOptimalBufferSize, networkSpeed]);
+  }, [autoPlay, cleanup, scheduleRetry, getOptimalBufferSize, networkSpeed, setIsInitializing]);
 
   // 5. createHlsPlayer
   const createHlsPlayer = useCallback((urlToLoad: string) => {
     const video = videoRef.current;
     if (!video) {
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
     if (!Hls.isSupported()) {
       toast.error("HLS non supporté");
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
@@ -662,15 +662,15 @@ export const VideoPlayerHybrid = ({
             description: `HLS • ${networkSpeed}`,
             duration: 2000
           });
-          isInitializingRef.current = false; // Initialization complete
+          setIsInitializing(false); // Initialization complete
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
           }
-          isInitializingRef.current = false; // Allow new initialization attempts
+          setIsInitializing(false); // Allow new initialization attempts
         });
       } else {
-        isInitializingRef.current = false; // Initialization complete even if not autoplaying
+        setIsInitializing(false); // Initialization complete even if not autoplaying
       }
     });
     
@@ -1025,7 +1025,7 @@ export const VideoPlayerHybrid = ({
       console.error('CRITICAL ERROR: Failed to get proxied URL for HLS:', error.message);
       setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
       setIsLoading(false);
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
@@ -1033,14 +1033,14 @@ export const VideoPlayerHybrid = ({
     if (typeof finalHlsUrl !== 'string' || !finalHlsUrl) {
       console.error('CRITICAL ERROR: finalHlsUrl is NOT a string or is empty before hls.loadSource:', finalHlsUrl);
       setErrorMessage('Erreur interne critique: URL du flux HLS invalide ou vide.');
-      isInitializingRef.current = false;
+      setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
     hls.loadSource(finalHlsUrl); // Use the validated string
     hls.attachMedia(video);
     hlsRef.current = hls;
-  }, [autoPlay, cleanup, scheduleRetry, networkSpeed]);
+  }, [autoPlay, cleanup, scheduleRetry, networkSpeed, setIsInitializing]);
 
   // 6. setupHlsEventHandlers
   const setupHlsEventHandlers = useCallback((hls: Hls, currentStreamUrl: string) => { // Added currentStreamUrl parameter
@@ -1089,20 +1089,13 @@ export const VideoPlayerHybrid = ({
     });
   }, [cleanup, createHlsPlayer]);
 
-  // 8. initPlayer (Moved before swapStream)
+  // 8. initPlayer
   const initPlayer = useCallback(() => {
-    if (isInitializingRef.current) {
-      console.log('[Player] Initialization already in progress, skipping initPlayer call.');
-      return;
-    }
-    isInitializingRef.current = true;
-
+    // No guard here, the main useEffect will handle `isInitializing`
     setIsLoading(true);
     setErrorMessage(null);
     retryCountRef.current = 0;
     fragErrorCountRef.current = 0;
-    
-    // No cleanup here, it's handled by the main useEffect.
     
     // Délai pour assurer destruction complète avant nouveau flux
     setTimeout(() => {
@@ -1116,7 +1109,7 @@ export const VideoPlayerHybrid = ({
         console.error('CRITICAL ERROR: Stream URL is invalid or empty in initPlayer:', currentStreamUrl);
         setErrorMessage('Erreur interne: URL du flux invalide ou vide.');
         setIsLoading(false);
-        isInitializingRef.current = false;
+        setIsInitializing(false); // Fatal error, reset initialization state
         return;
       }
 
@@ -1126,7 +1119,7 @@ export const VideoPlayerHybrid = ({
         createMpegtsPlayer(currentStreamUrl);
       }
     }, 150);
-  }, [streamUrl, createHlsPlayer, createMpegtsPlayer]);
+  }, [streamUrl, createHlsPlayer, createMpegtsPlayer, setIsInitializing]);
 
   // 7. swapStream
   const swapStream = useCallback(async (newUrl: string) => {
@@ -1210,6 +1203,7 @@ export const VideoPlayerHybrid = ({
           setErrorMessage(`Erreur de configuration du proxy lors du swap: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
           setIsLoading(false);
           isTransitioningRef.current = false;
+          setIsInitializing(false); // Fatal error, reset initialization state
           return;
         }
 
@@ -1218,6 +1212,7 @@ export const VideoPlayerHybrid = ({
           console.error('CRITICAL ERROR: HLS Swap URL is not a string or is empty:', finalNewHlsUrl);
           setErrorMessage('Erreur interne critique: URL du flux HLS invalide lors du swap.');
           isTransitioningRef.current = false;
+          setIsInitializing(false); // Fatal error, reset initialization state
           return;
         }
 
@@ -1268,17 +1263,12 @@ export const VideoPlayerHybrid = ({
       fragErrorCountRef.current = 0;
       retryCountRef.current = 0;
     }
-  }, [cleanup, createHlsPlayer, createMpegtsPlayer, setupHlsEventHandlers, initPlayer]);
+  }, [cleanup, createHlsPlayer, createMpegtsPlayer, setupHlsEventHandlers, initPlayer, setIsInitializing]);
 
   // 9. playVastAd
   const playVastAd = useCallback(async () => {
-    if (isInitializingRef.current) {
-      console.log('[VAST] Ad initialization already in progress, skipping playVastAd call.');
-      return;
-    }
-    isInitializingRef.current = true;
-
-    // Si vastUrl n'est pas fourni, passer directement au lecteur principal
+    // No guard here, the main useEffect will handle `isInitializing`
+    // If vastUrl is not provided, skip ad and proceed to main player
     if (!vastUrl) {
       console.log('[VAST] No VAST URL provided, skipping ad and proceeding to content.');
       initPlayer();
@@ -1494,7 +1484,7 @@ export const VideoPlayerHybrid = ({
       setIsLoading(false);
       initPlayer();
     }
-  }, [initPlayer, volume, isMuted, vastUrl, cleanup]); // Added cleanup to dependencies
+  }, [initPlayer, volume, isMuted, vastUrl, cleanup, setIsInitializing]); // Added setIsInitializing to dependencies
 
   const skipAd = useCallback(() => {
     if (!adSkippable) return;
@@ -1570,11 +1560,14 @@ export const VideoPlayerHybrid = ({
     
     console.log(`[Player] useEffect triggered for streamUrl: ${streamUrl}`); // Added log for debugging
     
+    // Set initialization state
+    setIsInitializing(true);
+
     // Reset tracking
     uptimeStartRef.current = Date.now();
     lastMemoryCleanupRef.current = Date.now();
     playbackQualityCheckRef.current = 0;
-    mpegtsStallRecoveryAttemptsRef.current = 0; // Reset MPEG-TS stall attempts
+    mpegtsStallRecoveryAttemptsRef.current = 0;
     
     // Perform a full cleanup BEFORE starting the ad/main player flow
     cleanup();
@@ -1591,9 +1584,9 @@ export const VideoPlayerHybrid = ({
     return () => {
       console.log('[Player] Cleanup on stream change/unmount');
       cleanup();
-      isInitializingRef.current = false; // Reset initialization flag on unmount
+      setIsInitializing(false); // Reset initialization flag on unmount
     };
-  }, [streamUrl, vastUrl, playVastAd, initPlayer, cleanup]);
+  }, [streamUrl, vastUrl, playVastAd, initPlayer, cleanup, setIsInitializing]);
   
   // Track user interaction for iOS autoplay workaround
   useEffect(() => {
@@ -1888,7 +1881,7 @@ export const VideoPlayerHybrid = ({
         setTimeout(() => createMpegtsPlayer(streamUrl), 500);
       }
     }
-  }, [availableQualities, streamUrl, cleanup, scheduleRetry, createMpegtsPlayer]);
+  }, [availableQualities, streamUrl, cleanup, scheduleRetry, createMpegtsPlayer, networkSpeed]);
 
   // Double-tap seek
   const handleVideoClick = (e: React.MouseEvent<HTMLDivElement>) => {
