@@ -1,3 +1,4 @@
+// @ts-ignore
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -68,6 +69,27 @@ function buildIPTVHeaders(streamUrl: string): Record<string, string> {
     headers['X-MAC-Address'] = mac;
   }
   
+  return headers;
+}
+
+// Build generic browser headers for VAST
+function buildGenericBrowserHeaders(refererUrl?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/webp, */*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Connection': 'keep-alive',
+    'DNT': '1',
+  };
+  if (refererUrl) {
+    try {
+      const origin = new URL(refererUrl).origin;
+      headers['Referer'] = refererUrl;
+      headers['Origin'] = origin;
+    } catch (e) {
+      console.warn('Invalid referer URL for VAST headers:', refererUrl, e);
+    }
+  }
   return headers;
 }
 
@@ -157,6 +179,14 @@ async function fetchWithRetry(
         return response;
       }
       
+      // Log response body for non-OK responses to help debug
+      try {
+        const responseBody = await response.text();
+        console.warn(`Response body for ${url} (status ${response.status}):`, responseBody.substring(0, 500)); // Log first 500 chars
+      } catch (e) {
+        console.warn('Could not read response body:', e);
+      }
+
       // Retry sur 5xx ou 429
       if (response.status >= 500 || response.status === 429) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -190,6 +220,7 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const streamUrl = url.searchParams.get('url');
+    const requestType = url.searchParams.get('type') || 'stream'; // 'stream' by default
     
     if (!streamUrl) {
       return new Response(
@@ -201,10 +232,17 @@ serve(async (req) => {
       );
     }
 
-    console.log('🎬 Proxying stream:', streamUrl);
+    console.log(`🎬 Proxying ${requestType} stream:`, streamUrl);
     
-    // Build headers
-    const forwardHeaders = buildIPTVHeaders(streamUrl);
+    // Build headers based on requestType
+    let forwardHeaders: Record<string, string>;
+    if (requestType === 'vast') {
+      // For VAST, use generic browser headers, potentially with the original page's origin as referer
+      forwardHeaders = buildGenericBrowserHeaders(streamUrl);
+    } else {
+      // For streams, use IPTV headers
+      forwardHeaders = buildIPTVHeaders(streamUrl);
+    }
     
     // Forward range header
     const range = req.headers.get('range');
@@ -218,17 +256,18 @@ serve(async (req) => {
     let lastError: Error | null = null;
     
     const strategies = [
-      // Strategy 1: IPTV headers with retry
+      // Strategy 1: Specific headers (IPTV or VAST generic) with retry
       async () => {
-        console.log('Strategy 1: IPTV headers + retry');
+        console.log(`Strategy 1: ${requestType} headers + retry`);
         return await fetchWithRetry(streamUrl, {
           headers: forwardHeaders,
           redirect: 'follow',
         }, 3);
       },
       
-      // Strategy 2: VLC-like with retry
+      // Strategy 2: VLC-like with retry (only for streams)
       async () => {
+        if (requestType === 'vast') throw new Error('VLC-like strategy not applicable for VAST');
         console.log('Strategy 2: VLC-like + retry');
         return await fetchWithRetry(streamUrl, {
           headers: {
@@ -240,8 +279,9 @@ serve(async (req) => {
         }, 2);
       },
       
-      // Strategy 3: Browser-like fallback
+      // Strategy 3: Browser-like fallback (only for streams)
       async () => {
+        if (requestType === 'vast') throw new Error('Browser-like strategy not applicable for VAST');
         console.log('Strategy 3: Browser fallback');
         return await fetchWithRetry(streamUrl, {
           headers: {
@@ -346,7 +386,7 @@ serve(async (req) => {
       });
     }
 
-    // ========== SEGMENT STREAMING (TS/MP4) ==========
+    // ========== SEGMENT STREAMING (TS/MP4) OR VAST XML ==========
     const responseHeaders = new Headers(corsHeaders);
     
     const headersToForward = [

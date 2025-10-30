@@ -25,8 +25,8 @@ type PlayerType = 'mpegts' | 'hls';
 // Déclaration de SUPABASE_PROJECT_ID au niveau du module pour une initialisation précoce et stable
 const SUPABASE_PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID; // Removed default value here to force explicit check
 
-const getProxiedUrl = (originalUrl: string): string => {
-  console.log('DEBUG: getProxiedUrl received originalUrl:', originalUrl, 'type:', typeof originalUrl);
+const getProxiedUrl = (originalUrl: string, type: 'stream' | 'vast' = 'stream'): string => {
+  console.log('DEBUG: getProxiedUrl received originalUrl:', originalUrl, 'type:', typeof originalUrl, 'requestType:', type);
   
   if (!SUPABASE_PROJECT_ID || typeof SUPABASE_PROJECT_ID !== 'string' || SUPABASE_PROJECT_ID.trim() === '') {
     const errorMsg = 'CRITICAL ERROR: SUPABASE_PROJECT_ID is not defined or is invalid. Please set VITE_SUPABASE_PROJECT_ID in your environment variables.';
@@ -36,7 +36,7 @@ const getProxiedUrl = (originalUrl: string): string => {
 
   console.log('DEBUG: Using Supabase Project ID:', SUPABASE_PROJECT_ID);
   const proxyUrl = `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/stream-proxy`;
-  const finalUrl = `${proxyUrl}?url=${encodeURIComponent(String(originalUrl))}`;
+  const finalUrl = `${proxyUrl}?url=${encodeURIComponent(String(originalUrl))}&type=${type}`;
   console.log('DEBUG: getProxiedUrl returning finalUrl:', finalUrl);
   return finalUrl;
 };
@@ -274,7 +274,7 @@ export const VideoPlayerHybrid = ({
     
     let finalUrl: string;
     try {
-      finalUrl = useProxyRef.current ? getProxiedUrl(urlToLoad) : urlToLoad;
+      finalUrl = useProxyRef.current ? getProxiedUrl(urlToLoad, 'stream') : urlToLoad;
     } catch (error: any) {
       console.error('CRITICAL ERROR: Failed to get proxied URL for MPEG-TS:', error.message);
       setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
@@ -733,8 +733,8 @@ export const VideoPlayerHybrid = ({
             if (hlsRef.current) {
               try {
                 // Tenter startLoad() avec position actuelle
-                const currentTime = videoRef.current?.currentTime || 0;
-                hlsRef.current.startLoad(currentTime);
+                const currentTime = video.currentTime || 0;
+                hls.startLoad(currentTime);
               } catch (e) {
                 console.error('startLoad failed:', e);
               }
@@ -835,8 +835,8 @@ export const VideoPlayerHybrid = ({
           setTimeout(() => {
             if (hlsRef.current) {
               try {
-                const currentTime = video.current?.currentTime || 0;
-                hls.current.startLoad(currentTime);
+                const currentTime = video.currentTime || 0;
+                hls.startLoad(currentTime);
               } catch (e) {
                 console.error('startLoad failed, recreating...');
                 cleanup();
@@ -1002,7 +1002,7 @@ export const VideoPlayerHybrid = ({
     
     let finalHlsUrl: string;
     try {
-      finalHlsUrl = getProxiedUrl(urlToLoad);
+      finalHlsUrl = getProxiedUrl(urlToLoad, 'stream');
     } catch (error: any) {
       console.error('CRITICAL ERROR: Failed to get proxied URL for HLS:', error.message);
       setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
@@ -1110,7 +1110,7 @@ export const VideoPlayerHybrid = ({
 
         // Précharger manifeste
         try {
-          await fetch(getProxiedUrl(newUrl), { method: 'HEAD', mode: 'cors' });
+          await fetch(getProxiedUrl(newUrl, 'stream'), { method: 'HEAD', mode: 'cors' });
         } catch (e) {
           console.warn('Manifest prefetch failed, continuing anyway');
         }
@@ -1145,7 +1145,7 @@ export const VideoPlayerHybrid = ({
         // Charger source et attacher
         let finalNewHlsUrl: string;
         try {
-          finalNewHlsUrl = getProxiedUrl(newUrl);
+          finalNewHlsUrl = getProxiedUrl(newUrl, 'stream');
         } catch (error: any) {
           console.error('CRITICAL ERROR: Failed to get proxied URL for HLS swap:', error.message);
           setErrorMessage(`Erreur de configuration du proxy lors du swap: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
@@ -1267,7 +1267,7 @@ export const VideoPlayerHybrid = ({
       const vastClient = new VASTClient();
       
       // PROXIFIER L'URL VAST POUR ÉVITER LES PROBLÈMES CORS
-      const proxiedVastUrl = getProxiedUrl(String(vastUrl));
+      const proxiedVastUrl = getProxiedUrl(String(vastUrl), 'vast');
       console.log('DEBUG: Proxied VAST URL:', proxiedVastUrl);
 
       const response = await vastClient.get(proxiedVastUrl);
@@ -1727,7 +1727,7 @@ export const VideoPlayerHybrid = ({
         let config = {
           type: 'mpegts',
           isLive: true,
-          url: useProxyRef.current ? getProxiedUrl(streamUrl) : streamUrl,
+          url: useProxyRef.current ? getProxiedUrl(streamUrl, 'stream') : streamUrl,
           cors: true,
           withCredentials: false
         };
