@@ -7,19 +7,27 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
 
-const PREDEFINED_CHANNELS = [{
-  name: "EUROSPORT 1",
-  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_HD/index.m3u8"
-}, {
-  name: "EUROSPORT 2",
-  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_2_HD/index.m3u8"
-}, {
-  name: "CANAL+",
-  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_HD/index.m3u8"
-}, {
-  name: "CANAL+ SPORT",
-  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_sport_HD/index.m3u8"
-}];
+const PREDEFINED_CHANNELS = [
+  { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_HD/index.m3u8" },
+  { name: "EUROSPORT 2", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/8492" },
+  { name: "CANAL+", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_HD/index.m3u8" },
+  { name: "CANAL+ SPORT", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_sport_HD/index.m3u8" },
+  { name: "CANAL+ GOLF", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/GOLF+_HD/index.m3u8" },
+  { name: "BEIN SPORT 1", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/beinfr1/index.m3u8" },
+  { name: "BEIN SPORT 2", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/beinfr2/index.m3u8" },
+  { name: "BEIN SPORT 3", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/sf1_bein_hd3_fr/index.m3u8" },
+  { name: "RMC SPORT 1", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/rmc1/index.m3u8" },
+  { name: "RMC SPORT 2", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/591256" },
+  { name: "RMC SPORT 3", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/591255" },
+  { name: "ESPN", url: "https://02.arlivre.online/espn/index.m3u8" },
+  { name: "ESPN 2", url: "https://02.arlivre.online/espn2/index.m3u8" },
+  { name: "ESPN 3", url: "https://02.arlivre.online/espn3/index.m3u8" },
+  { name: "ESPN 4", url: "https://02.arlivre.online/espn4/index.m3u8" },
+  { name: "LIGUE 1+", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/612101" },
+  { name: "LIGUE 1+ 2", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/612100" },
+  { name: "LIGUE 1+ 3", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/612099" },
+  { name: "LIGUE 1+ 4", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/612098" }
+];
 
 const VAST_AD_URL = "https://frail-benefit.com/dSm.FXzfdiGMNjv/ZcGAUP/Behm/9DuzZvUmlfkiP/TdYs2aO/T/AzxuNtDuYEtGNcjJY/5cMeDUEt0UNvwn";
 
