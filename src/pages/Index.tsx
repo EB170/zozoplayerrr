@@ -8,38 +8,17 @@ import { toast } from "sonner";
 import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
 
 const PREDEFINED_CHANNELS = [{
-  name: "Eurosport 1 FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=250665&extension=ts"
+  name: "EUROSPORT 1",
+  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_HD/index.m3u8"
 }, {
-  name: "Eurosport 2 FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=250664&extension=ts"
+  name: "EUROSPORT 2",
+  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_2_HD/index.m3u8"
 }, {
-  name: "Ligue 1+ FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=1523608&extension=ts"
+  name: "CANAL+",
+  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_HD/index.m3u8"
 }, {
-  name: "Ligue 1+ 2 FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=1567322&extension=ts"
-}, {
-  name: "Ligue 1+ 3 FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=1567324&extension=ts"
-}, {
-  name: "Ligue 1+ 4 FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=1567325&extension=ts"
-}, {
-  name: "RMC Sport 1 FHD",
-  url: "http://eagle2024.xyz:80/play/live.php?mac=00:1A:79:84:0F:1B&stream=/play/live.php?mac=00:1A:79:BF:47:35&stream=32835&extension=ts"
-}, {
-  name: "Canal+ FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=148474&extension=ts"
-}, {
-  name: "Canal+ Foot FHD",
-  url: "http://drmv3-m6.info:80/play/live.php?mac=00:1A:79:84:1A:60&stream=/play/live.php?mac=00:1A:79:CD:E0:3F&stream=256629&extension=ts"
-}, {
-  name: "Canal+ Sport 360 FHD",
-  url: "http://eagle2024.xyz:80/play/live.php?mac=00:1A:79:CD:E0:3F&stream=256628&extension=ts"
-}, {
-  name: "Canal+ Sport FHD",
-  url: "http://eagle2024.xyz:80/play/live.php?mac=00:1A:79:BF:47:35&stream=250679&extension=ts"
+  name: "CANAL+ SPORT",
+  url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_sport_HD/index.m3u8"
 }];
 
 const VAST_AD_URL = "https://frail-benefit.com/dcmuFBz.daGiNHvGZXGuUf/Leym/9DuQZcUKlzk_PBTiYN2nO/D_g/x/OwTqYptQN/jrYC4bOWDEEe5hNKww";
@@ -56,7 +35,7 @@ const Index = () => {
       setStreamUrl(channel.url);
       setCustomUrl(""); // Clear custom URL when selecting from list
       toast.success(`📺 Chargement de ${channel.name}`, {
-        description: "Le flux sera prêt dans quelques instants",
+        description: "La publicité va démarrer, suivie du flux.",
         duration: 3000,
       });
     }
@@ -81,7 +60,7 @@ const Index = () => {
     setStreamUrl(customUrl);
     setSelectedChannel(""); // Clear channel selection
     toast.success("🔗 Chargement du flux personnalisé", {
-      description: "Connexion en cours...",
+      description: "La publicité va démarrer, suivie du flux.",
       duration: 3000,
     });
   };
@@ -170,7 +149,7 @@ const Index = () => {
           <div className="animate-in fade-in zoom-in slide-in-from-bottom-4 duration-700">
             <VideoPlayerHybrid 
               streamUrl={streamUrl} 
-              vastUrl={VAST_AD_URL} // Re-enabled VAST URL
+              vastUrl={VAST_AD_URL}
               autoPlay 
             />
           </div>
