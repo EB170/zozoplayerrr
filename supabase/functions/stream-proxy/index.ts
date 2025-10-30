@@ -73,23 +73,19 @@ function buildIPTVHeaders(streamUrl: string): Record<string, string> {
 }
 
 // Build generic browser headers for VAST
-function buildGenericBrowserHeaders(refererUrl?: string): Record<string, string> {
+function buildGenericBrowserHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/webp, */*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.5',
     'Connection': 'keep-alive',
     'DNT': '1',
+    'Referer': 'https://www.google.com/', // Generic referer for VAST to avoid blocking
+    'Origin': 'https://www.google.com/', // Generic origin for VAST
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'cross-site',
   };
-  if (refererUrl) {
-    try {
-      const origin = new URL(refererUrl).origin;
-      headers['Referer'] = refererUrl;
-      headers['Origin'] = origin;
-    } catch (e) {
-      console.warn('Invalid referer URL for VAST headers:', refererUrl, e);
-    }
-  }
   return headers;
 }
 
@@ -167,6 +163,7 @@ async function fetchWithRetry(
       const timeoutMs = 12000 + (attempt * 3000); // 12s, 15s, 18s, 21s
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
       
+      console.log(`[Proxy Fetch] Attempt ${attempt + 1} for ${url} with timeout ${timeoutMs}ms`);
       const response = await fetch(url, {
         ...options,
         signal: controller.signal,
@@ -175,16 +172,16 @@ async function fetchWithRetry(
       clearTimeout(timeoutId);
       
       if (response.ok) {
-        console.log(`✅ Fetch success on attempt ${attempt + 1}`);
+        console.log(`[Proxy Fetch] ✅ Success on attempt ${attempt + 1} with status ${response.status}`);
         return response;
       }
       
       // Log response body for non-OK responses to help debug
       try {
         const responseBody = await response.text();
-        console.warn(`Response body for ${url} (status ${response.status}):`, responseBody.substring(0, 500)); // Log first 500 chars
+        console.warn(`[Proxy Fetch] Response body for ${url} (status ${response.status}):`, responseBody.substring(0, 500)); // Log first 500 chars
       } catch (e) {
-        console.warn('Could not read response body:', e);
+        console.warn('[Proxy Fetch] Could not read response body:', e);
       }
 
       // Retry sur 5xx ou 429
@@ -197,12 +194,12 @@ async function fetchWithRetry(
       
     } catch (error) {
       lastError = error as Error;
-      console.warn(`⚠️ Fetch attempt ${attempt + 1} failed:`, error);
+      console.warn(`[Proxy Fetch] ⚠️ Attempt ${attempt + 1} failed for ${url}: ${error instanceof Error ? error.message : String(error)}`);
       
       if (attempt < maxRetries) {
         // Exponential backoff: 500ms, 1s, 2s
         const delayMs = 500 * Math.pow(2, attempt);
-        console.log(`🔄 Retrying in ${delayMs}ms...`);
+        console.log(`[Proxy Fetch] 🔄 Retrying in ${delayMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -232,15 +229,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`🎬 Proxying ${requestType} stream:`, streamUrl);
+    console.log(`[Proxy] 🎬 Proxying ${requestType} stream:`, streamUrl);
     
     // Build headers based on requestType
     let forwardHeaders: Record<string, string>;
     if (requestType === 'vast') {
-      // For VAST, use generic browser headers, potentially with the original page's origin as referer
-      forwardHeaders = buildGenericBrowserHeaders(streamUrl);
+      forwardHeaders = buildGenericBrowserHeaders(); // No refererUrl needed here
     } else {
-      // For streams, use IPTV headers
       forwardHeaders = buildIPTVHeaders(streamUrl);
     }
     
@@ -248,7 +243,7 @@ serve(async (req) => {
     const range = req.headers.get('range');
     if (range) {
       forwardHeaders['Range'] = range;
-      console.log('📦 Range request:', range);
+      console.log('[Proxy] 📦 Range request:', range);
     }
 
     // ========== MULTI-STRATEGY FETCH WITH RETRY ==========
@@ -258,7 +253,7 @@ serve(async (req) => {
     const strategies = [
       // Strategy 1: Specific headers (IPTV or VAST generic) with retry
       async () => {
-        console.log(`Strategy 1: ${requestType} headers + retry`);
+        console.log(`[Proxy] Strategy 1: ${requestType} headers + retry`);
         return await fetchWithRetry(streamUrl, {
           headers: forwardHeaders,
           redirect: 'follow',
@@ -268,7 +263,7 @@ serve(async (req) => {
       // Strategy 2: VLC-like with retry (only for streams)
       async () => {
         if (requestType === 'vast') throw new Error('VLC-like strategy not applicable for VAST');
-        console.log('Strategy 2: VLC-like + retry');
+        console.log('[Proxy] Strategy 2: VLC-like + retry');
         return await fetchWithRetry(streamUrl, {
           headers: {
             'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
@@ -282,7 +277,7 @@ serve(async (req) => {
       // Strategy 3: Browser-like fallback (only for streams)
       async () => {
         if (requestType === 'vast') throw new Error('Browser-like strategy not applicable for VAST');
-        console.log('Strategy 3: Browser fallback');
+        console.log('[Proxy] Strategy 3: Browser fallback');
         return await fetchWithRetry(streamUrl, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -298,19 +293,19 @@ serve(async (req) => {
       try {
         response = await strategy();
         if (response.ok) {
-          console.log('✅ Strategy succeeded:', response.status);
+          console.log('[Proxy] ✅ Strategy succeeded:', response.status);
           break;
         }
         lastError = new Error(`HTTP ${response.status}`);
       } catch (error) {
-        console.error('❌ Strategy failed:', error);
+        console.error('[Proxy] ❌ Strategy failed:', error);
         lastError = error as Error;
         response = null;
       }
     }
 
     if (!response || !response.ok) {
-      console.error('💥 All strategies failed:', lastError?.message);
+      console.error('[Proxy] 💥 All strategies failed:', lastError?.message);
       
       return new Response(
         JSON.stringify({ 
@@ -326,21 +321,21 @@ serve(async (req) => {
     }
 
     const contentType = response.headers.get('content-type') || '';
-    console.log('📄 Content-Type:', contentType);
+    console.log('[Proxy] 📄 Content-Type:', contentType);
     
     // ========== HLS MANIFEST HANDLING ==========
     if (contentType.includes('application/vnd.apple.mpegurl') || 
         contentType.includes('application/x-mpegURL') ||
         streamUrl.includes('.m3u8')) {
       
-      console.log('🎭 HLS manifest detected');
+      console.log('[Proxy] 🎭 HLS manifest detected');
       
       // Check cache first
       const cached = manifestCache.get(streamUrl);
       const now = Date.now();
       
       if (cached && (now - cached.timestamp) < MANIFEST_CACHE_TTL) {
-        console.log('⚡ Returning cached manifest');
+        console.log('[Proxy] ⚡ Returning cached manifest');
         return new Response(cached.content, {
           status: 200,
           headers: {
@@ -406,7 +401,7 @@ serve(async (req) => {
       responseHeaders.set('Cache-Control', 'public, max-age=31536000, immutable');
     }
 
-    console.log('📺 Streaming response');
+    console.log('[Proxy] 📺 Streaming response');
 
     return new Response(response.body, {
       status: response.status,
@@ -414,7 +409,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('💥 Proxy error:', error);
+    console.error('[Proxy] 💥 Proxy error:', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
