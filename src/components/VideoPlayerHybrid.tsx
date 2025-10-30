@@ -508,6 +508,10 @@ export const VideoPlayerHybrid = ({
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
+            toast.error("Échec de lecture", {
+              description: "Le flux n'a pas pu démarrer automatiquement.",
+              duration: 3000
+            });
             scheduleRetry(() => createMpegtsPlayer(urlToLoad));
           } else {
             setIsInitializing(false); // Allow new initialization attempts
@@ -628,6 +632,7 @@ export const VideoPlayerHybrid = ({
       autoStartLoad: true,               // Démarrer chargement dès attachMedia
       startPosition: -1                  // -1 = live edge automatique
     });
+    
     // Logs debug optionnels
     if (hlsDebugMode.current) {
       hls.on(Hls.Events.LEVEL_SWITCHED, (e, d) => 
@@ -640,6 +645,24 @@ export const VideoPlayerHybrid = ({
         console.debug('[HLS] FRAG_LOADED', d.frag.sn)
       );
     }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // NOUVELLE STRATÉGIE RADICALE POUR LE PROXY HLS
+    // Intercepte TOUTES les requêtes HLS et les redirige via le proxy
+    // ════════════════════════════════════════════════════════════════════════
+    hls.on(Hls.Events.MANIFEST_LOADING, (event, data) => {
+      if (!data.url.includes('supabase.co/functions/v1/stream-proxy')) {
+        console.log(`[HLS Proxy Intercept] Proxifying MANIFEST URL: ${data.url}`);
+        data.url = getProxiedUrl(data.url, 'stream');
+      }
+    });
+
+    hls.on(Hls.Events.FRAG_LOADING, (event, data) => {
+      if (!data.frag.url.includes('supabase.co/functions/v1/stream-proxy')) {
+        console.log(`[HLS Proxy Intercept] Proxifying FRAGMENT URL: ${data.frag.url}`);
+        data.frag.url = getProxiedUrl(data.frag.url, 'stream');
+      }
+    });
 
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
       console.log('✅ HLS Manifest parsed:', data.levels.length, 'levels');
@@ -666,6 +689,10 @@ export const VideoPlayerHybrid = ({
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
+            toast.error("Échec de lecture", {
+              description: "Le flux n'a pas pu démarrer automatiquement.",
+              duration: 3000
+            });
           }
           setIsInitializing(false); // Allow new initialization attempts
         });
@@ -1018,26 +1045,17 @@ export const VideoPlayerHybrid = ({
     (hls as any)._maintenanceInterval = hlsMaintenanceInterval;
     memoryCleanupIntervalRef.current = hlsMaintenanceInterval;
     
-    let finalHlsUrl: string;
-    try {
-      finalHlsUrl = getProxiedUrl(urlToLoad, 'stream');
-    } catch (error: any) {
-      console.error('CRITICAL ERROR: Failed to get proxied URL for HLS:', error.message);
-      setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
-      setIsLoading(false);
-      setIsInitializing(false); // Fatal error, reset initialization state
-      return;
-    }
-
-    console.log('CRITICAL DEBUG: URL before hls.loadSource:', finalHlsUrl, 'type:', typeof finalHlsUrl);
-    if (typeof finalHlsUrl !== 'string' || !finalHlsUrl) {
-      console.error('CRITICAL ERROR: finalHlsUrl is NOT a string or is empty before hls.loadSource:', finalHlsUrl);
+    // La source HLS est maintenant chargée avec l'URL originale,
+    // car la fonction `url` dans la config HLS.js gère le proxying.
+    console.log('CRITICAL DEBUG: HLS will load original source, proxying handled by config.url:', urlToLoad, 'type:', typeof urlToLoad);
+    if (typeof urlToLoad !== 'string' || !urlToLoad) {
+      console.error('CRITICAL ERROR: HLS URL is NOT a string or is empty before hls.loadSource:', urlToLoad);
       setErrorMessage('Erreur interne critique: URL du flux HLS invalide ou vide.');
       setIsInitializing(false); // Fatal error, reset initialization state
       return;
     }
 
-    hls.loadSource(finalHlsUrl); // Use the validated string
+    hls.loadSource(urlToLoad); // Use the original URL, proxying is handled by the config.url function
     hls.attachMedia(video);
     hlsRef.current = hls;
   }, [autoPlay, cleanup, scheduleRetry, networkSpeed, setIsInitializing]);
@@ -1160,9 +1178,28 @@ export const VideoPlayerHybrid = ({
           startPosition: -1,
         });
 
+        // ════════════════════════════════════════════════════════════════════════
+        // NOUVELLE STRATÉGIE RADICALE POUR LE PROXY HLS
+        // Intercepte TOUTES les requêtes HLS et les redirige via le proxy
+        // ════════════════════════════════════════════════════════════════════════
+        newHls.on(Hls.Events.MANIFEST_LOADING, (event, data) => {
+          if (!data.url.includes('supabase.co/functions/v1/stream-proxy')) {
+            console.log(`[HLS Swap Proxy Intercept] Proxifying MANIFEST URL: ${data.url}`);
+            data.url = getProxiedUrl(data.url, 'stream');
+          }
+        });
+
+        newHls.on(Hls.Events.FRAG_LOADING, (event, data) => {
+          if (!data.frag.url.includes('supabase.co/functions/v1/stream-proxy')) {
+            console.log(`[HLS Swap Proxy Intercept] Proxifying FRAGMENT URL: ${data.frag.url}`);
+            data.frag.url = getProxiedUrl(data.frag.url, 'stream');
+          }
+        });
+
         // Précharger manifeste
         try {
-          await fetch(getProxiedUrl(newUrl, 'stream'), { method: 'HEAD', mode: 'cors' });
+          // Fetch the original URL, proxying is handled by the Hls config.url function
+          await fetch(newUrl, { method: 'HEAD', mode: 'cors' });
         } catch (e) {
           console.warn('Manifest prefetch failed, continuing anyway');
         }
@@ -1195,28 +1232,16 @@ export const VideoPlayerHybrid = ({
         });
 
         // Charger source et attacher
-        let finalNewHlsUrl: string;
-        try {
-          finalNewHlsUrl = getProxiedUrl(newUrl, 'stream');
-        } catch (error: any) {
-          console.error('CRITICAL ERROR: Failed to get proxied URL for HLS swap:', error.message);
-          setErrorMessage(`Erreur de configuration du proxy lors du swap: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
-          setIsLoading(false);
-          isTransitioningRef.current = false;
-          setIsInitializing(false); // Fatal error, reset initialization state
-          return;
-        }
-
-        console.log('CRITICAL DEBUG: HLS Swap Player final URL:', finalNewHlsUrl, 'type:', typeof finalNewHlsUrl);
-        if (typeof finalNewHlsUrl !== 'string' || !finalNewHlsUrl) {
-          console.error('CRITICAL ERROR: HLS Swap URL is not a string or is empty:', finalNewHlsUrl);
+        console.log('CRITICAL DEBUG: HLS Swap Player will load original source, proxying handled by config.url:', newUrl, 'type:', typeof newUrl);
+        if (typeof newUrl !== 'string' || !newUrl) {
+          console.error('CRITICAL ERROR: HLS Swap URL is not a string or is empty:', newUrl);
           setErrorMessage('Erreur interne critique: URL du flux HLS invalide lors du swap.');
           isTransitioningRef.current = false;
           setIsInitializing(false); // Fatal error, reset initialization state
           return;
         }
 
-        newHls.loadSource(finalNewHlsUrl); // Use the validated string
+        newHls.loadSource(newUrl); // Use the original URL, proxying is handled by the config.url function
         newHls.attachMedia(video);
         
         await readyPromise;
@@ -1484,7 +1509,7 @@ export const VideoPlayerHybrid = ({
       setIsLoading(false);
       initPlayer();
     }
-  }, [initPlayer, volume, isMuted, vastUrl, cleanup, setIsInitializing]); // Added setIsInitializing to dependencies
+  }, [initPlayer, volume, isMuted, vastUrl, cleanup, setIsInitializing]);
 
   const skipAd = useCallback(() => {
     if (!adSkippable) return;
