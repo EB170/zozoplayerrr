@@ -21,7 +21,7 @@ const PREDEFINED_CHANNELS = [{
   url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_sport_HD/index.m3u8"
 }];
 
-const VAST_AD_URL = "https://frail-benefit.com/dcmuFBz.daGiNHvGZXGuUf/Leym/9DuQZcUKlzk_PBTiYN2nO/D_g/x/OwTqYptQN/jrYC4bOWDEEe5hNKww";
+const VAST_AD_URL = "https://frail-benefit.com/dSm.FXzfdiGMNjv/ZcGAUP/Behm/9DuzZvUmlfkiP/TdYs2aO/T/AzxuNtDuYEtGNcjJY/5cMeDUEt0UNvwn";
 
 const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
