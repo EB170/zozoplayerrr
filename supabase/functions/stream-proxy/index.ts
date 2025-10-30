@@ -63,6 +63,7 @@ function buildIPTVHeaders(streamUrl: string): Record<string, string> {
     'Origin': urlObj.origin,
     'Referer': `${urlObj.origin}/`,
     'X-User-Agent': 'Model: MAG250; Link: WiFi',
+    'X-Forwarded-Proto': 'https', // Inform upstream about original protocol
   };
   
   if (mac) {
@@ -78,6 +79,7 @@ function buildGenericBrowserHeaders(): Record<string, string> {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     'Accept': 'text/xml, application/xml, application/xhtml+xml, text/html;q=0.9, image/webp, */*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'identity', // Crucial for proxies to avoid decompression issues
     'Connection': 'keep-alive',
     'DNT': '1',
     'Referer': 'https://www.google.com/', // Generic referer for VAST to avoid blocking
@@ -85,6 +87,8 @@ function buildGenericBrowserHeaders(): Record<string, string> {
     'Sec-Fetch-Dest': 'empty',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Site': 'cross-site',
+    'Sec-Fetch-User': '?1', // Indicates a user-initiated navigation
+    'X-Forwarded-Proto': 'https', // Inform upstream about original protocol
   };
   return headers;
 }
@@ -234,9 +238,11 @@ serve(async (req) => {
     // Build headers based on requestType
     let forwardHeaders: Record<string, string>;
     if (requestType === 'vast') {
-      forwardHeaders = buildGenericBrowserHeaders(); // No refererUrl needed here
+      forwardHeaders = buildGenericBrowserHeaders();
+      console.log('[Proxy] VAST Request Headers:', forwardHeaders); // Add this log
     } else {
       forwardHeaders = buildIPTVHeaders(streamUrl);
+      console.log('[Proxy] Stream Request Headers:', forwardHeaders); // Add this log
     }
     
     // Forward range header
@@ -269,6 +275,7 @@ serve(async (req) => {
             'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
             'Accept': '*/*',
             'Connection': 'keep-alive',
+            'X-Forwarded-Proto': 'https',
           },
           redirect: 'follow',
         }, 2);
@@ -283,6 +290,7 @@ serve(async (req) => {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
             'Accept': '*/*',
             'Referer': new URL(streamUrl).origin,
+            'X-Forwarded-Proto': 'https',
           },
           redirect: 'follow',
         }, 1);
