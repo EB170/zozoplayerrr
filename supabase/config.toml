@@ -1,4 +1,2 @@
-project_id = "wxkvljkvqcamktlwfmfx"
-
-[functions.stream-proxy]
-verify_jwt = false
+[project]
+project_id = "btuujbfqtdwhdyhtvuys"
