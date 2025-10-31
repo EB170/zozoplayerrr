@@ -181,6 +181,24 @@ const Index = () => {
           </Card>
         )}
 
+        {/* Upcoming Events Section */}
+        <div className="space-y-6 pt-8">
+          <h2 className="text-2xl font-bold text-foreground text-center">Évènements à venir</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <EventCard
+              imageUrl="/card1.jpg"
+              title="Brazilian Grand Prix"
+              date="dim. 9 nov., 18:00"
+            />
+            <EventCard
+              imageUrl="/card2.jpg"
+              title="UFC Fight Night"
+              date="dim. 2 nov., 00:00"
+            />
+            {/* Ajoutez d'autres EventCard ici si nécessaire */}
+          </div>
+        </div>
+
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="p-6 bg-card border-border hover:border-primary/50 transition-colors">
@@ -201,24 +219,6 @@ const Index = () => {
               Conçu pour la lecture continue de flux en direct sans interruption
             </p>
           </Card>
-        </div>
-
-        {/* Upcoming Events Section */}
-        <div className="space-y-6 pt-8">
-          <h2 className="text-2xl font-bold text-foreground text-center">Évènements à venir</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <EventCard
-              imageUrl="/card1.jpg"
-              title="Brazilian Grand Prix"
-              date="dim. 9 nov., 18:00"
-            />
-            <EventCard
-              imageUrl="/card2.jpg"
-              title="UFC Fight Night"
-              date="dim. 2 nov., 00:00"
-            />
-            {/* Ajoutez d'autres EventCard ici si nécessaire */}
-          </div>
         </div>
       </div>
       <PWAInstallPrompt />
