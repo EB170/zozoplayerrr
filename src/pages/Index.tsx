@@ -8,11 +8,12 @@ import { toast } from "sonner";
 import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
 
 const PREDEFINED_CHANNELS = [
-  { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Eurosport_HD/index.m3u8" },
-  { name: "EUROSPORT 2", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/8492" },
+  { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65922" },
+  { name: "EUROSPORT 2", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65924" },
   { name: "CANAL+", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_HD/index.m3u8" },
   { name: "CANAL+ SPORT", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/Canal+_sport_HD/index.m3u8" },
   { name: "CANAL+ GOLF", url: "https://satoshi-cors.herokuapp.com/http://151.80.18.177:86/GOLF+_HD/index.m3u8" },
+  { name: "CANAL+ FOOT", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65934" },
   { name: "BEIN SPORT 1", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/beinfr1/index.m3u8" },
   { name: "BEIN SPORT 2", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/beinfr2/index.m3u8" },
   { name: "BEIN SPORT 3", url: "https://satoshi-cors.herokuapp.com/http://5.9.119.146:8883/sf1_bein_hd3_fr/index.m3u8" },
