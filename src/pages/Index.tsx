@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner"; // Keep sonner for other toasts
 import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt"; // Import the new component
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
+import EventCard from "@/components/EventCard"; // Import the new EventCard component
 
 const PREDEFINED_CHANNELS = [
   { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65922" },
@@ -201,8 +202,26 @@ const Index = () => {
             </p>
           </Card>
         </div>
+
+        {/* Upcoming Events Section */}
+        <div className="space-y-6 pt-8">
+          <h2 className="text-2xl font-bold text-foreground text-center">Évènements à venir</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <EventCard
+              imageUrl="/card1.jpg"
+              title="Brazilian Grand Prix"
+              date="dim. 9 nov., 18:00"
+            />
+            <EventCard
+              imageUrl="/card2.jpg"
+              title="UFC Fight Night"
+              date="dim. 2 nov., 00:00"
+            />
+            {/* Ajoutez d'autres EventCard ici si nécessaire */}
+          </div>
+        </div>
       </div>
-      <PWAInstallPrompt /> {/* Render the new PWA install prompt component */}
+      <PWAInstallPrompt />
     </div>
   );
 };
