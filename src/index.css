@@ -156,7 +156,4 @@ All colors MUST be HSL.
   .bg-primary {
     @apply shadow-md shadow-primary/30; /* Add subtle shadow to primary buttons */
   }
-  .hover\\:bg-primary\\/90:hover {
-    @apply shadow-lg shadow-primary/40;
-  }
 }
