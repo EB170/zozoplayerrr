@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { VideoPlayerHybrid } from "@/components/VideoPlayerHybrid"; // Changed to VideoPlayerHybrid
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,6 +36,45 @@ const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [customUrl, setCustomUrl] = useState("");
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  
+  useEffect(() => {
+    // Détecte si l'application est déjà installée en tant que PWA
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
+    const hasDismissedPrompt = localStorage.getItem('pwa_install_prompt_dismissed');
+
+    if (!isPWA && !hasDismissedPrompt) {
+      const timer = setTimeout(() => {
+        setShowInstallPrompt(true);
+      }, 2000); // Déclenche après 2 secondes d'activité
+
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showInstallPrompt) {
+      toast.info("Ajoutez à l'écran d'accueil", {
+        description: "Pour une meilleure expérience, installez l'application sur votre écran d'accueil !",
+        duration: Infinity, // Reste visible jusqu'à ce qu'il soit ignoré
+        action: {
+          label: "Ajouter",
+          onClick: () => {
+            toast.success("Suivez les instructions de votre navigateur", {
+              description: "Utilisez le menu de partage pour ajouter à l'écran d'accueil.",
+              duration: 5000
+            });
+            localStorage.setItem('pwa_install_prompt_dismissed', 'true');
+            setShowInstallPrompt(false);
+          },
+        },
+        onDismiss: () => {
+          localStorage.setItem('pwa_install_prompt_dismissed', 'true');
+          setShowInstallPrompt(false);
+        },
+      });
+    }
+  }, [showInstallPrompt]);
   
   const handleChannelSelect = (channelName: string) => {
     const channel = PREDEFINED_CHANNELS.find(ch => ch.name === channelName);
