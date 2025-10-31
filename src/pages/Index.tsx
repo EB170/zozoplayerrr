@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 
 const PREDEFINED_CHANNELS = [
   { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65922" },
@@ -37,33 +38,49 @@ const Index = () => {
   const [selectedChannel, setSelectedChannel] = useState("");
   const [customUrl, setCustomUrl] = useState("");
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  
+  const isMobile = useIsMobile(); // Use the hook to detect mobile
+
   useEffect(() => {
     // Détecte si l'application est déjà installée en tant que PWA
     const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
     const hasDismissedPrompt = localStorage.getItem('pwa_install_prompt_dismissed');
 
-    if (!isPWA && !hasDismissedPrompt) {
+    // Affiche le prompt uniquement sur mobile, si pas déjà PWA et pas déjà ignoré
+    if (isMobile && !isPWA && !hasDismissedPrompt) {
       const timer = setTimeout(() => {
         setShowInstallPrompt(true);
       }, 2000); // Déclenche après 2 secondes d'activité
 
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isMobile]); // Add isMobile to dependencies
 
   useEffect(() => {
     if (showInstallPrompt) {
-      toast.info("Ajoutez à l'écran d'accueil", {
-        description: "Pour une meilleure expérience, installez l'application sur votre écran d'accueil !",
+      toast.info("Installez l'application pour une meilleure expérience !", {
+        description: (
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p className="font-semibold text-white">Suivez ces étapes simples :</p>
+            <ol className="list-decimal list-inside space-y-1 text-white/80">
+              <li>
+                Appuyez sur l'icône <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
+              </li>
+              <li>
+                Sélectionnez <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
+              </li>
+              <li>
+                Confirmez l'ajout et profitez de l'application en plein écran !
+              </li>
+            </ol>
+            <p className="text-xs text-white/60 mt-2">
+              (Cela ne prend que quelques secondes et améliore la fluidité.)
+            </p>
+          </div>
+        ),
         duration: Infinity, // Reste visible jusqu'à ce qu'il soit ignoré
         action: {
-          label: "Ajouter",
+          label: "Compris !",
           onClick: () => {
-            toast.success("Suivez les instructions de votre navigateur", {
-              description: "Utilisez le menu de partage pour ajouter à l'écran d'accueil.",
-              duration: 5000
-            });
             localStorage.setItem('pwa_install_prompt_dismissed', 'true');
             setShowInstallPrompt(false);
           },
@@ -72,6 +89,8 @@ const Index = () => {
           localStorage.setItem('pwa_install_prompt_dismissed', 'true');
           setShowInstallPrompt(false);
         },
+        className: "bg-card border-primary/50 shadow-lg", // Custom styling for the toast
+        unstyled: false, // Ensure default sonner styling is applied
       });
     }
   }, [showInstallPrompt]);
