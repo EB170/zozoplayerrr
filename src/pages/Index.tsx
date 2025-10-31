@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
+import { Video, Tv, Link as LinkIcon, Play, Sparkles, Share2, PlusCircle } from "lucide-react"; // Added Sparkles, Share2, PlusCircle
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 
 const PREDEFINED_CHANNELS = [
@@ -57,23 +57,29 @@ const Index = () => {
 
   useEffect(() => {
     if (showInstallPrompt) {
-      toast.info("Installez l'application pour une meilleure expérience !", {
+      toast.info("Passez à l'expérience complète !", {
         description: (
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p className="font-semibold text-white">Suivez ces étapes simples :</p>
-            <ol className="list-decimal list-inside space-y-1 text-white/80">
-              <li>
-                Appuyez sur l'icône <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
+          <div className="text-sm text-muted-foreground space-y-3 p-2">
+            <p className="font-semibold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Installez l'application pour une meilleure fluidité et un accès rapide !
+            </p>
+            <ol className="list-none space-y-2 text-white/80">
+              <li className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs">1</span>
+                Appuyez sur l'icône <Share2 className="inline-block w-4 h-4 text-primary mx-1" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
               </li>
-              <li>
-                Sélectionnez <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
+              <li className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs">2</span>
+                Sélectionnez <PlusCircle className="inline-block w-4 h-4 text-accent mx-1" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
               </li>
-              <li>
+              <li className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs">3</span>
                 Confirmez l'ajout et profitez de l'application en plein écran !
               </li>
             </ol>
-            <p className="text-xs text-white/60 mt-2">
-              (Cela ne prend que quelques secondes et améliore la fluidité.)
+            <p className="text-xs text-white/60 mt-3">
+              (Cela ne prend que quelques secondes et transforme le site en une véritable app.)
             </p>
           </div>
         ),
@@ -89,7 +95,7 @@ const Index = () => {
           localStorage.setItem('pwa_install_prompt_dismissed', 'true');
           setShowInstallPrompt(false);
         },
-        className: "bg-card border-primary/50 shadow-lg", // Custom styling for the toast
+        className: "bg-card border-primary/50 shadow-lg max-w-sm md:max-w-md", // Custom styling for the toast
         unstyled: false, // Ensure default sonner styling is applied
       });
     }
