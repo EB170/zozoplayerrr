@@ -59,26 +59,26 @@ const Index = () => {
     if (showInstallPrompt) {
       toast.info("Passez à l'expérience complète !", {
         description: (
-          <div className="text-sm text-muted-foreground space-y-4">
-            <p className="font-semibold text-white flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+          <div className="text-sm md:text-base text-muted-foreground space-y-4 md:space-y-5">
+            <p className="font-semibold text-white flex items-center gap-2 md:gap-3">
+              <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
               Installez l'application pour une meilleure fluidité et un accès rapide !
             </p>
-            <ol className="list-none space-y-3 text-white/80">
-              <li className="flex items-start gap-2">
-                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs flex-shrink-0 mt-0.5">1</span>
-                Appuyez sur l'icône <Share2 className="inline-block w-4 h-4 text-primary mx-1 flex-shrink-0" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
+            <ol className="list-none space-y-3 md:space-y-4 text-white/80">
+              <li className="flex items-start gap-2 md:gap-3">
+                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">1</span>
+                Appuyez sur l'icône <Share2 className="inline-block w-4 h-4 md:w-5 md:h-5 text-primary mx-1 flex-shrink-0" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
               </li>
-              <li className="flex items-start gap-2">
-                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs flex-shrink-0 mt-0.5">2</span>
-                Sélectionnez <PlusCircle className="inline-block w-4 h-4 text-accent mx-1 flex-shrink-0" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
+              <li className="flex items-start gap-2 md:gap-3">
+                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">2</span>
+                Sélectionnez <PlusCircle className="inline-block w-4 h-4 md:w-5 md:h-5 text-accent mx-1 flex-shrink-0" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
               </li>
-              <li className="flex items-start gap-2">
-                <span className="flex items-center justify-center w-6 h-6 bg-primary/20 text-primary rounded-full font-bold text-xs flex-shrink-0 mt-0.5">3</span>
+              <li className="flex items-start gap-2 md:gap-3">
+                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">3</span>
                 Confirmez l'ajout et profitez de l'application en plein écran !
               </li>
             </ol>
-            <p className="text-xs text-white/60 mt-4">
+            <p className="text-xs md:text-sm text-white/60 mt-4 md:mt-5">
               (Cela ne prend que quelques secondes et transforme le site en une véritable app.)
             </p>
           </div>
@@ -95,7 +95,7 @@ const Index = () => {
           localStorage.setItem('pwa_install_prompt_dismissed', 'true');
           setShowInstallPrompt(false);
         },
-        className: "bg-gradient-to-br from-card to-background border-primary/50 shadow-2xl max-w-sm md:max-w-lg p-6", // Custom styling for the toast
+        className: "bg-gradient-to-br from-card to-background border-primary/50 shadow-2xl max-w-xs sm:max-w-md md:max-w-lg p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500", // Custom styling for the toast
         unstyled: false, // Ensure default sonner styling is applied
       });
     }
