@@ -82,7 +82,7 @@ const Index = () => {
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center mb-6">
-            <img src="/logo.png" alt="ZozoPlayer" className="h-16 md:h-20 object-contain" />
+            <img src="/logo.png" alt="ZozoPlayer" className="h-12 md:h-16 object-contain" />
           </div>
         </div>
 
