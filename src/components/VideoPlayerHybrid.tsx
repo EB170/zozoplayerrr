@@ -99,6 +99,8 @@ export const VideoPlayerHybrid = ({
   const maintenanceIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mpegtsStallRecoveryAttemptsRef = useRef(0);
   
+  const isAdOrPlayerSetupInProgressRef = useRef(false); // NEW REF: Prevents re-entry into setup flow
+
   const [isInitializing, setIsInitializing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,6 +224,7 @@ export const VideoPlayerHybrid = ({
         duration: 5000
       });
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
     const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
@@ -244,6 +247,7 @@ export const VideoPlayerHybrid = ({
     const video = videoRef.current;
     if (!video) {
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
     
@@ -267,6 +271,7 @@ export const VideoPlayerHybrid = ({
       setErrorMessage(`Erreur de configuration du proxy: ${error.message}. Veuillez vérifier vos variables d'environnement.`);
       setIsLoading(false);
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
 
@@ -275,6 +280,7 @@ export const VideoPlayerHybrid = ({
       console.error('CRITICAL ERROR: finalUrl is NOT a string or is empty before mpegts.createPlayer:', finalUrl);
       setErrorMessage('Erreur interne critique: URL du flux MPEG-TS invalide ou vide.');
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
 
@@ -470,6 +476,7 @@ export const VideoPlayerHybrid = ({
             duration: 2000
           });
           setIsInitializing(false);
+          isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on success
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
@@ -480,15 +487,16 @@ export const VideoPlayerHybrid = ({
             scheduleRetry(() => createMpegtsPlayer(urlToLoad));
           } else {
             setIsInitializing(false);
+            isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on abort
           }
         });
       }, 500);
     } else {
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished if not autoplaying
     }
   }, [autoPlay, cleanup, scheduleRetry, getOptimalBufferSize, networkSpeed, setIsInitializing]);
 
-  // Helper function for HLS event handlers
   const setupHlsEventHandlers = useCallback((hls: Hls, currentStreamUrl: string, createHlsPlayerFn: (url: string) => void) => {
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
       const qualities: StreamQuality[] = data.levels.map((level: any, index: number) => ({
@@ -532,17 +540,19 @@ export const VideoPlayerHybrid = ({
         }
       }
     });
-  }, [cleanup]); // createHlsPlayerFn is passed as an argument, not a dependency
+  }, [cleanup]);
 
   const createHlsPlayer = useCallback((urlToLoad: string) => {
     const video = videoRef.current;
     if (!video) {
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
     if (!Hls.isSupported()) {
       toast.error("HLS non supporté");
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
 
@@ -634,7 +644,6 @@ export const VideoPlayerHybrid = ({
       }
     });
 
-    // Attacher les gestionnaires d'événements HLS AVANT de charger la source
     setupHlsEventHandlers(hls, urlToLoad, createHlsPlayer);
 
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
@@ -659,6 +668,7 @@ export const VideoPlayerHybrid = ({
             duration: 2000
           });
           setIsInitializing(false);
+          isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on success
         }).catch(err => {
           if (err.name !== 'AbortError') {
             console.error('❌ Play failed:', err);
@@ -668,9 +678,11 @@ export const VideoPlayerHybrid = ({
             });
           }
           setIsInitializing(false);
+          isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on abort
         });
       } else {
         setIsInitializing(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished if not autoplaying
       }
     });
     
@@ -967,6 +979,7 @@ export const VideoPlayerHybrid = ({
       console.error('CRITICAL ERROR: HLS URL is NOT a string or is empty before hls.loadSource:', urlToLoad);
       setErrorMessage('Erreur interne critique: URL du flux HLS invalide ou vide.');
       setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
       return;
     }
 
@@ -976,6 +989,13 @@ export const VideoPlayerHybrid = ({
   }, [autoPlay, cleanup, scheduleRetry, networkSpeed, setIsInitializing, setupHlsEventHandlers]);
 
   const initPlayer = useCallback(() => {
+    console.log('[Player] initPlayer called.');
+    if (isAdOrPlayerSetupInProgressRef.current) {
+      console.log('[Player] initPlayer: Setup already in progress, skipping.');
+      return;
+    }
+    isAdOrPlayerSetupInProgressRef.current = true; // Mark setup as in progress
+
     setIsLoading(true);
     setErrorMessage(null);
     retryCountRef.current = 0;
@@ -993,6 +1013,7 @@ export const VideoPlayerHybrid = ({
         setErrorMessage('Erreur interne: URL du flux invalide ou vide.');
         setIsLoading(false);
         setIsInitializing(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
         return;
       }
 
@@ -1093,6 +1114,7 @@ export const VideoPlayerHybrid = ({
           setErrorMessage('Erreur interne critique: URL du flux HLS invalide lors du swap.');
           isTransitioningRef.current = false;
           setIsInitializing(false);
+          isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished on fatal error
           return;
         }
 
@@ -1140,8 +1162,16 @@ export const VideoPlayerHybrid = ({
   }, [cleanup, createHlsPlayer, createMpegtsPlayer, setupHlsEventHandlers, initPlayer, setIsInitializing]);
 
   const playVastAd = useCallback(async () => {
+    console.log('[VAST] playVastAd called.');
+    if (isAdOrPlayerSetupInProgressRef.current) {
+      console.log('[VAST] playVastAd: Setup already in progress, skipping.');
+      return;
+    }
+    isAdOrPlayerSetupInProgressRef.current = true; // Mark setup as in progress
+
     if (!vastUrl) {
       console.log('[VAST] No VAST URL provided, skipping ad and proceeding to content.');
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
       initPlayer();
       return;
     }
@@ -1149,6 +1179,7 @@ export const VideoPlayerHybrid = ({
     const adVideo = adVideoRef.current;
     if (!adVideo) {
       console.warn('[VAST] Ad video element not available, falling back to main player.');
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
       initPlayer();
       return;
     }
@@ -1171,6 +1202,7 @@ export const VideoPlayerHybrid = ({
         console.warn('[VAST] No ad found, proceeding to content');
         setAdPlaying(false);
         setIsLoading(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
         initPlayer();
         return;
       }
@@ -1180,6 +1212,7 @@ export const VideoPlayerHybrid = ({
         console.warn('[VAST] No linear creative, proceeding to content');
         setAdPlaying(false);
         setIsLoading(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
         initPlayer();
         return;
       }
@@ -1192,6 +1225,7 @@ export const VideoPlayerHybrid = ({
         console.warn('[VAST] No suitable media file found, proceeding to content');
         setAdPlaying(false);
         setIsLoading(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
         initPlayer();
         return;
       }
@@ -1258,6 +1292,7 @@ export const VideoPlayerHybrid = ({
         cleanupAdListeners();
         setAdPlaying(false);
         setIsLoading(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
         initPlayer();
       };
 
@@ -1269,6 +1304,7 @@ export const VideoPlayerHybrid = ({
         cleanupAdListeners();
         setAdPlaying(false);
         setIsLoading(false);
+        isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
         initPlayer();
       };
       
@@ -1308,6 +1344,7 @@ export const VideoPlayerHybrid = ({
           cleanupAdListeners();
           setAdPlaying(false);
           setIsLoading(false);
+          isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
           initPlayer();
         }
       };
@@ -1334,6 +1371,7 @@ export const VideoPlayerHybrid = ({
       console.error('[VAST] Fatal error during ad loading/parsing:', error);
       setAdPlaying(false);
       setIsLoading(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
       initPlayer();
     }
   }, [initPlayer, volume, isMuted, vastUrl, cleanup, setIsInitializing]);
@@ -1354,6 +1392,7 @@ export const VideoPlayerHybrid = ({
     }
     
     setAdPlaying(false);
+    isAdOrPlayerSetupInProgressRef.current = false; // Mark setup as finished
     initPlayer();
   }, [adSkippable, initPlayer]);
 
@@ -1405,8 +1444,13 @@ export const VideoPlayerHybrid = ({
   useEffect(() => {
     if (!videoRef.current || !streamUrl) return;
     
-    console.log(`[Player] useEffect triggered for streamUrl: ${streamUrl}`);
+    console.log(`[Player] Main useEffect triggered for streamUrl: ${streamUrl}. isAdOrPlayerSetupInProgress: ${isAdOrPlayerSetupInProgressRef.current}`);
     
+    if (isAdOrPlayerSetupInProgressRef.current) {
+      console.log('[Player] Main useEffect: Ad or player setup already in progress, deferring new request.');
+      return;
+    }
+
     setIsInitializing(true);
 
     uptimeStartRef.current = Date.now();
@@ -1426,9 +1470,9 @@ export const VideoPlayerHybrid = ({
     return () => {
       console.log('[Player] Cleanup on stream change/unmount');
       cleanup();
-      setIsInitializing(false);
+      isAdOrPlayerSetupInProgressRef.current = false; // Reset ref on unmount
     };
-  }, [streamUrl, vastUrl, playVastAd, initPlayer, cleanup, setIsInitializing]);
+  }, [streamUrl, vastUrl, playVastAd, initPlayer, cleanup]);
   
   useEffect(() => {
     const markInteraction = () => {
