@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { VideoPlayerHybrid } from "@/components/VideoPlayerHybrid"; // Changed to VideoPlayerHybrid
+import { VideoPlayerHybrid } from "@/components/VideoPlayerHybrid";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
-import { Video, Tv, Link as LinkIcon, Play, Sparkles, Share2, PlusCircle } from "lucide-react"; // Added Sparkles, Share2, PlusCircle
-import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
+import { toast } from "sonner"; // Keep sonner for other toasts
+import { Video, Tv, Link as LinkIcon, Play } from "lucide-react";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt"; // Import the new component
 
 const PREDEFINED_CHANNELS = [
   { name: "EUROSPORT 1", url: "https://satoshi-cors.herokuapp.com/http://x02x.live:8080/y1s3HkjU/jchcPTU/65922" },
@@ -37,71 +37,7 @@ const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("");
   const [customUrl, setCustomUrl] = useState("");
-  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const isMobile = useIsMobile(); // Use the hook to detect mobile
 
-  useEffect(() => {
-    // Détecte si l'application est déjà installée en tant que PWA
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone;
-    const hasDismissedPrompt = localStorage.getItem('pwa_install_prompt_dismissed');
-
-    // Affiche le prompt uniquement sur mobile, si pas déjà PWA et pas déjà ignoré
-    if (isMobile && !isPWA && !hasDismissedPrompt) {
-      const timer = setTimeout(() => {
-        setShowInstallPrompt(true);
-      }, 2000); // Déclenche après 2 secondes d'activité
-
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile]); // Add isMobile to dependencies
-
-  useEffect(() => {
-    if (showInstallPrompt) {
-      toast.info("Passez à l'expérience complète !", {
-        description: (
-          <div className="text-sm md:text-base text-muted-foreground space-y-4 md:space-y-5">
-            <p className="font-semibold text-white flex items-center gap-2 md:gap-3">
-              <Sparkles className="w-5 h-5 text-primary flex-shrink-0" />
-              Installez l'application pour une meilleure fluidité et un accès rapide !
-            </p>
-            <ol className="list-none space-y-3 md:space-y-4 text-white/80">
-              <li className="flex items-start gap-2 md:gap-3">
-                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">1</span>
-                Appuyez sur l'icône <Share2 className="inline-block w-4 h-4 md:w-5 md:h-5 text-primary mx-1 flex-shrink-0" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
-              </li>
-              <li className="flex items-start gap-2 md:gap-3">
-                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">2</span>
-                Sélectionnez <PlusCircle className="inline-block w-4 h-4 md:w-5 md:h-5 text-accent mx-1 flex-shrink-0" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
-              </li>
-              <li className="flex items-start gap-2 md:gap-3">
-                <span className="flex items-center justify-center w-6 h-6 md:w-7 md:h-7 bg-primary/20 text-primary rounded-full font-bold text-xs md:text-sm flex-shrink-0 mt-0.5">3</span>
-                Confirmez l'ajout et profitez de l'application en plein écran !
-              </li>
-            </ol>
-            <p className="text-xs md:text-sm text-white/60 mt-4 md:mt-5">
-              (Cela ne prend que quelques secondes et transforme le site en une véritable app.)
-            </p>
-          </div>
-        ),
-        duration: Infinity, // Reste visible jusqu'à ce qu'il soit ignoré
-        action: {
-          label: "Compris !",
-          onClick: () => {
-            localStorage.setItem('pwa_install_prompt_dismissed', 'true');
-            setShowInstallPrompt(false);
-          },
-        },
-        onDismiss: () => {
-          localStorage.setItem('pwa_install_prompt_dismissed', 'true');
-          setShowInstallPrompt(false);
-        },
-        // MODIFICATIONS ICI pour le rendre full-screen sur mobile
-        className: "fixed inset-0 z-[9999] bg-gradient-to-br from-card to-background border-primary/50 shadow-2xl max-w-full h-full rounded-none p-6 sm:p-8 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500",
-        unstyled: false, // Ensure default sonner styling is applied
-      });
-    }
-  }, [showInstallPrompt]);
-  
   const handleChannelSelect = (channelName: string) => {
     const channel = PREDEFINED_CHANNELS.find(ch => ch.name === channelName);
     if (channel) {
@@ -266,6 +202,7 @@ const Index = () => {
           </Card>
         </div>
       </div>
+      <PWAInstallPrompt /> {/* Render the new PWA install prompt component */}
     </div>
   );
 };
