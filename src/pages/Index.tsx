@@ -95,7 +95,8 @@ const Index = () => {
           localStorage.setItem('pwa_install_prompt_dismissed', 'true');
           setShowInstallPrompt(false);
         },
-        className: "bg-gradient-to-br from-card to-background border-primary/50 shadow-2xl max-w-xs sm:max-w-md md:max-w-lg p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-500", // Custom styling for the toast
+        // MODIFICATIONS ICI pour le rendre full-screen sur mobile
+        className: "fixed inset-0 z-[9999] bg-gradient-to-br from-card to-background border-primary/50 shadow-2xl max-w-full h-full rounded-none p-6 sm:p-8 flex flex-col justify-center animate-in fade-in slide-in-from-bottom-4 duration-500",
         unstyled: false, // Ensure default sonner styling is applied
       });
     }
