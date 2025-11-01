@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Share2, PlusCircle, X } from 'lucide-react';
+import { Sparkles, Share2, PlusCircle } from 'lucide-react'; // Removed X icon
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -40,14 +40,7 @@ const PWAInstallPrompt = () => {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
       <Card className="relative bg-card border border-primary/50 shadow-2xl p-6 md:p-8 rounded-lg mx-4 max-w-sm sm:max-w-md text-center space-y-6 md:space-y-8 animate-in zoom-in-95 slide-in-from-bottom-2 duration-500">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleDismiss}
-          className="absolute top-4 right-4 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-        >
-          <X className="w-5 h-5" />
-        </Button>
+        {/* Removed the close button (X icon) */}
 
         <div className="space-y-4 md:space-y-5">
           <p className="font-bold text-foreground text-xl md:text-2xl flex items-center justify-center gap-2 md:gap-3">
@@ -67,7 +60,7 @@ const PWAInstallPrompt = () => {
             <li className="flex items-center gap-3">
               <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0">2</span>
               <span className="text-sm md:text-base">
-                Ajoutez à l'<span className="font-bold text-primary">écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-accent align-middle animate-bounce-slow delay-100" />.
+                Ajoutez à l'<span className="font-bold text-primary">écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-primary align-middle animate-bounce-slow delay-100" />.
               </span>
             </li>
             <li className="flex items-center gap-3">
