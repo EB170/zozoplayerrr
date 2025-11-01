@@ -67,7 +67,7 @@ const PWAInstallPrompt = () => {
             <li className="flex items-center gap-3">
               <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0">2</span>
               <span className="text-sm md:text-base">
-                <span className="font-bold text-foreground">Ajoutez à l'écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-accent align-middle animate-bounce-slow delay-100" />.
+                Ajoutez à l'<span className="font-bold text-primary">écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-accent align-middle animate-bounce-slow delay-100" />.
               </span>
             </li>
             <li className="flex items-center gap-3">
