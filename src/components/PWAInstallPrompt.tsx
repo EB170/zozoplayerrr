@@ -39,43 +39,43 @@ const PWAInstallPrompt = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <Card className="relative bg-card border border-primary/50 shadow-2xl p-6 md:p-8 rounded-lg mx-4 max-w-sm sm:max-w-md md:max-w-lg text-center space-y-6 animate-in zoom-in-95 slide-in-from-bottom-2 duration-500">
+      <Card className="relative bg-card border border-primary/50 shadow-2xl p-8 md:p-10 rounded-lg mx-4 max-w-sm sm:max-w-md md:max-w-lg text-center space-y-8 animate-in zoom-in-95 slide-in-from-bottom-2 duration-500">
         <Button
           variant="ghost"
           size="icon"
           onClick={handleDismiss}
-          className="absolute top-3 right-3 h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          className="absolute top-4 right-4 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted/50"
         >
           <X className="w-5 h-5" />
         </Button>
 
-        <div className="space-y-4 md:space-y-5">
-          <p className="font-semibold text-foreground text-lg md:text-xl flex items-center justify-center gap-2 md:gap-3">
-            <Sparkles className="w-6 h-6 text-primary flex-shrink-0" />
+        <div className="space-y-5 md:space-y-6">
+          <p className="font-bold text-foreground text-xl md:text-2xl flex items-center justify-center gap-2 md:gap-3">
+            <Sparkles className="w-7 h-7 text-primary flex-shrink-0 animate-pulse" />
             Passez à l'expérience complète !
           </p>
-          <p className="text-sm md:text-base text-muted-foreground">
+          <p className="text-base md:text-lg text-muted-foreground">
             Installez l'application pour une meilleure fluidité et un accès rapide.
           </p>
-          <ol className="list-none space-y-3 md:space-y-4 text-foreground/80 text-left">
-            <li className="flex items-start gap-2 md:gap-3">
-              <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0 mt-0.5">1</span>
-              Appuyez sur l'icône <Share2 className="inline-block w-5 h-5 text-primary mx-1 flex-shrink-0" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
+          <ol className="list-none space-y-4 md:space-y-5 text-foreground/80 text-left">
+            <li className="flex items-start gap-3 md:gap-4">
+              <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">1</span>
+              Appuyez sur l'icône <Share2 className="inline-block w-6 h-6 text-primary mx-1 flex-shrink-0 animate-bounce-slow" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
             </li>
-            <li className="flex items-start gap-2 md:gap-3">
-              <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0 mt-0.5">2</span>
-              Sélectionnez <PlusCircle className="inline-block w-5 h-5 text-accent mx-1 flex-shrink-0" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
+            <li className="flex items-start gap-3 md:gap-4">
+              <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">2</span>
+              Sélectionnez <PlusCircle className="inline-block w-6 h-6 text-accent mx-1 flex-shrink-0 animate-bounce-slow delay-100" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
             </li>
-            <li className="flex items-start gap-2 md:gap-3">
-              <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0 mt-0.5">3</span>
+            <li className="flex items-start gap-3 md:gap-4">
+              <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">3</span>
               Confirmez l'ajout et profitez de l'application en plein écran !
             </li>
           </ol>
-          <p className="text-xs md:text-sm text-muted-foreground/60 mt-4 md:mt-5">
+          <p className="text-sm md:text-base text-muted-foreground/60 mt-5 md:mt-6">
             (Cela ne prend que quelques secondes et transforme le site en une véritable app.)
           </p>
         </div>
-        <Button onClick={handleDismiss} className="w-full bg-primary hover:bg-primary/90 mt-6">
+        <Button onClick={handleDismiss} className="w-full bg-primary hover:bg-primary/90 mt-8 text-base md:text-lg py-3 md:py-4">
           Compris !
         </Button>
       </Card>
