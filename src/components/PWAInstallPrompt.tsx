@@ -52,7 +52,7 @@ const PWAInstallPrompt = () => {
         <div className="space-y-4 md:space-y-5">
           <p className="font-bold text-foreground text-xl md:text-2xl flex items-center justify-center gap-2 md:gap-3">
             <Sparkles className="w-7 h-7 text-primary flex-shrink-0 animate-pulse" />
-            Passez à l'expérience complète !
+            Téléchargez l'app !
           </p>
           <p className="text-base md:text-lg text-muted-foreground max-w-sm mx-auto">
             Installez l'application pour une meilleure fluidité et un accès rapide.
@@ -67,7 +67,7 @@ const PWAInstallPrompt = () => {
             <li className="flex items-center gap-3">
               <span className="flex items-center justify-center w-7 h-7 bg-primary/20 text-primary rounded-full font-bold text-sm flex-shrink-0">2</span>
               <span className="text-sm md:text-base">
-                <span className="font-bold text-accent">Ajoutez à l'écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-accent align-middle animate-bounce-slow delay-100" />.
+                <span className="font-bold text-foreground">Ajoutez à l'écran d'accueil</span> <PlusCircle className="inline-block w-5 h-5 text-accent align-middle animate-bounce-slow delay-100" />.
               </span>
             </li>
             <li className="flex items-center gap-3">
