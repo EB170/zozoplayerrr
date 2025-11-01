@@ -60,15 +60,15 @@ const PWAInstallPrompt = () => {
           <ol className="list-none space-y-4 md:space-y-5 text-foreground/80 text-left">
             <li className="flex items-start gap-3 md:gap-4">
               <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">1</span>
-              Appuyez sur l'icône <Share2 className="inline-block w-6 h-6 text-primary mx-1 flex-shrink-0 animate-bounce-slow" /> <span className="font-bold text-primary">Partager</span> (ou menu) de votre navigateur.
+              Appuyez sur l'icône <Share2 className="inline-block w-6 h-6 text-primary mx-1 flex-shrink-0 animate-bounce-slow" /> <span className="font-bold text-primary">Partager</span> (ou menu).
             </li>
             <li className="flex items-start gap-3 md:gap-4">
               <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">2</span>
-              Sélectionnez <PlusCircle className="inline-block w-6 h-6 text-accent mx-1 flex-shrink-0 animate-bounce-slow delay-100" /> <span className="font-bold text-accent">"Ajouter à l'écran d'accueil"</span>.
+              <span className="font-bold text-accent">Ajoutez à l'écran d'accueil</span> <PlusCircle className="inline-block w-6 h-6 text-accent mx-1 flex-shrink-0 animate-bounce-slow delay-100" />.
             </li>
             <li className="flex items-start gap-3 md:gap-4">
               <span className="flex items-center justify-center w-8 h-8 bg-primary/20 text-primary rounded-full font-bold text-base flex-shrink-0 mt-0.5">3</span>
-              Confirmez l'ajout et profitez de l'application en plein écran !
+              Confirmez et profitez en plein écran !
             </li>
           </ol>
           <p className="text-sm md:text-base text-muted-foreground/60 mt-5 md:mt-6">
