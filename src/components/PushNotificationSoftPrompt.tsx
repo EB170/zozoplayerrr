@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react'; // Removed 'React' as it's not directly used in JSX
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { BellRing, X, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 interface PushNotificationSoftPromptProps {
@@ -14,7 +13,6 @@ interface PushNotificationSoftPromptProps {
 }
 
 const PUSH_OPT_IN_DISMISSED_KEY = 'monetag_push_opt_in_dismissed';
-// const PUSH_OPT_IN_ACCEPTED_KEY = 'monetag_push_opt_in_accepted'; // Removed as its value is never read
 
 const PushNotificationSoftPrompt = ({ onAccept, onDismiss, isVisible }: PushNotificationSoftPromptProps) => {
   const [showPrompt, setShowPrompt] = useState(isVisible);

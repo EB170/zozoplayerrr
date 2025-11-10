@@ -5,17 +5,23 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MonetagManager from "./components/MonetagManager";
-import React from "react"; // Ajouté pour React.useRef
+import React from "react";
+import { adStateManager } from "@/lib/adStateManager"; // Import du manager
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const monetagManagerRef = React.useRef(null);
 
+  // Initialisation du Ad State Manager une seule fois
+  React.useEffect(() => {
+    console.log(`[AdManager] User Status: ${adStateManager.getUserStatus()}`);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <MonetagManager ref={monetagManagerRef} /> {/* Passer la ref ici */}
+        <MonetagManager ref={monetagManagerRef} />
         <Sonner
           toastOptions={{
             classNames: {
@@ -34,8 +40,7 @@ const App = () => {
         />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index monetagRef={monetagManagerRef} />} /> {/* Passer la ref à Index */}
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/" element={<Index monetagRef={monetagManagerRef} />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
