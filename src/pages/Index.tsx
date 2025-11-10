@@ -13,10 +13,17 @@ import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
 import VideoPlayerHybrid, { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
 import AdGateOverlay from "@/components/AdGateOverlay";
+import { adStateManager } from "@/lib/adStateManager";
 
 type Channel = Tables<'channels'>;
 
-// The ChannelListContent component remains unchanged...
+interface IndexProps {
+  monetagManagerRef: React.RefObject<{
+    showInPagePush: () => void;
+    requestPushNotifications: () => void;
+  }>;
+}
+
 const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onToggleFavorite, favorites, isLoading, layout = 'sidebar' }: { channels: Channel[], selectedChannel: string, onChannelSelect: (channel: Channel) => void, onToggleFavorite: (channelName: string, e: React.MouseEvent) => void, favorites: string[], isLoading: boolean, layout?: 'sidebar' | 'inline' }) => {
   const isSidebar = layout === 'sidebar';
 
@@ -108,7 +115,7 @@ const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onTogg
 };
 
 
-const Index = () => {
+const Index = ({ monetagManagerRef }: IndexProps) => {
   const [streamUrl, setStreamUrl] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -133,21 +140,45 @@ const Index = () => {
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
-    setIsLocked(true); // Verrouiller à chaque changement de chaîne
-    toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
+    // Vérifier si l'utilisateur a un pass valide. Si oui, on déverrouille direct.
+    if (adStateManager.hasValidAdGatePass()) {
+      setIsLocked(false);
+      toast.info("Accès direct grâce à votre pass !");
+    } else {
+      setIsLocked(true);
+      toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
+    }
   };
 
   const handleCustomUrlSubmit = (url: string) => {
     setSelectedChannel(null);
     setStreamUrl(url);
-    setIsLocked(true);
-    toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
+    if (adStateManager.hasValidAdGatePass()) {
+      setIsLocked(false);
+      toast.info("Accès direct grâce à votre pass !");
+    } else {
+      setIsLocked(true);
+      toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
+    }
   };
 
   const handleUnlock = useCallback(() => {
     setIsLocked(false);
-    playerRef.current?.play();
-  }, []);
+    // Attendre un tick pour que le DOM se mette à jour avant de jouer
+    setTimeout(() => {
+      playerRef.current?.play();
+    }, 100);
+
+    // Déclencher les actifs secondaires après un délai
+    setTimeout(() => {
+      monetagManagerRef.current?.requestPushNotifications();
+    }, 90 * 1000); // 90 secondes pour la demande Push
+
+    setTimeout(() => {
+      monetagManagerRef.current?.showInPagePush();
+    }, 5 * 60 * 1000); // 5 minutes pour l'In-Page Push
+
+  }, [monetagManagerRef]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['channels'] });

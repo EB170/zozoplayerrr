@@ -46,10 +46,11 @@ class AdStateManager {
   }
 
   public canShow(format: AdFormat): boolean {
+    if (this.isPremium()) return false;
+    
     const adFreeUntil = parseInt(localStorage.getItem('adFreeUntil') || '0');
-    if (Date.now() < adFreeUntil || this.isPremium()) {
-      return false;
-    }
+    if (Date.now() < adFreeUntil) return false;
+
     if (format === 'popunder' && this.sessionHasSeenPreroll) {
       return false;
     }
@@ -89,6 +90,16 @@ class AdStateManager {
   public grantAdFreePass(durationHours: number) {
     const adFreeUntil = Date.now() + (durationHours * 60 * 60 * 1000);
     localStorage.setItem('adFreeUntil', adFreeUntil.toString());
+  }
+
+  public grantAdGatePass(durationHours: number = 12) {
+    const passExpiresAt = Date.now() + (durationHours * 60 * 60 * 1000);
+    localStorage.setItem('adGatePassExpiresAt', passExpiresAt.toString());
+  }
+
+  public hasValidAdGatePass(): boolean {
+    const passExpiresAt = parseInt(localStorage.getItem('adGatePassExpiresAt') || '0');
+    return Date.now() < passExpiresAt;
   }
 
   public hasAcceptedPush(): boolean {

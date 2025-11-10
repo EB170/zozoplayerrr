@@ -1,6 +1,7 @@
 "use client";
 
 import { Play } from 'lucide-react';
+import { adStateManager } from '@/lib/adStateManager';
 
 interface AdGateOverlayProps {
   onUnlock: () => void;
@@ -11,7 +12,7 @@ const MONETAG_POP_UNDER_ZONE_ID = '10168808';
 const AdGateOverlay = ({ onUnlock }: AdGateOverlayProps) => {
   
   const handleUnlock = () => {
-    // 1. Injecter et exécuter le script Pop-under
+    // Action 1: Déclencher le Pop-under (la monétisation)
     try {
       const scriptId = 'monetag-pop-under-script';
       if (!document.getElementById(scriptId)) {
@@ -23,10 +24,13 @@ const AdGateOverlay = ({ onUnlock }: AdGateOverlayProps) => {
         document.body.appendChild(script);
       }
     } catch (e) {
-      console.error("Failed to inject Pop-under script:", e);
+      console.error("[Ad-Gate] Failed to inject Pop-under script:", e);
     }
 
-    // 2. Appeler la fonction de déverrouillage du parent
+    // Action 2: Donner le "pass" de 12h à l'utilisateur
+    adStateManager.grantAdGatePass(12);
+
+    // Action 3: Appeler la fonction de déverrouillage du parent pour cacher l'overlay et lancer la vidéo
     onUnlock();
   };
 
@@ -36,7 +40,7 @@ const AdGateOverlay = ({ onUnlock }: AdGateOverlayProps) => {
         <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-primary/20 flex items-center justify-center mb-6 transition-transform hover:scale-110 duration-300">
           <Play className="w-12 h-12 md:w-16 md:h-16 text-primary fill-primary" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-white">Déverrouiller le Direct</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-white">ACCÉDER AU DIRECT</h2>
         <p className="text-muted-foreground mt-2">Cliquez pour lancer la lecture</p>
       </div>
     </div>
