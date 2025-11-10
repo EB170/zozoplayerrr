@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { VideoPlayerHybrid } from "@/components/VideoPlayerHybrid";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,16 +11,14 @@ import { Tables } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
-import PreLiveEngagement from "@/components/PreLiveEngagement"; // Import du nouveau composant
+import VideoPlayerVAST from "@/components/VideoPlayerVAST"; // Nouveau lecteur
+import { adStateManager } from "@/lib/adStateManager";
 
 type Channel = Tables<'channels'>;
 
 interface IndexProps {
   monetagRef: React.RefObject<{
-    showPopUnder: () => void;
-    showInPagePush: () => void;
     requestPushNotifications: () => void;
-    sendLiveStartPushNotification: () => void; // Ajout de la nouvelle fonction
   }>;
 }
 
@@ -121,12 +118,7 @@ const Index = ({ monetagRef }: IndexProps) => {
   const [isChangingChannel, setIsChangingChannel] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [userHasInteracted, setUserHasInteracted] = useState(false);
-  const [isLive, setIsLive] = useState(false); // Nouveau state pour gérer le début du live
   const queryClient = useQueryClient();
-
-  // Simuler un temps avant le live pour le test (ex: 10 minutes = 600 secondes)
-  // En production, cette valeur viendrait de votre backend ou d'une logique de détection.
-  const [streamStartsInSeconds, setStreamStartsInSeconds] = useState(600); // 10 minutes pour le test
 
   const { data: channels = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['channels'],
@@ -140,12 +132,22 @@ const Index = ({ monetagRef }: IndexProps) => {
   useEffect(() => {
     const storedFavorites = localStorage.getItem("favoriteChannels");
     if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
-  }, []);
+
+    // Détection d'Ad-Blocker au chargement de la page
+    adStateManager.detectAdBlocker().then(detected => {
+      if (detected && adStateManager.canShow('push_prompt')) {
+        toast.info("Pour soutenir le site, pensez à activer les notifications !", {
+          action: {
+            label: "Activer",
+            onClick: () => monetagRef.current?.requestPushNotifications(),
+          },
+        });
+      }
+    });
+  }, [monetagRef]);
 
   const handleFirstInteraction = useCallback(() => {
-    if (!userHasInteracted) {
-      setUserHasInteracted(true);
-    }
+    if (!userHasInteracted) setUserHasInteracted(true);
   }, [userHasInteracted]);
 
   const handleChannelSelect = (channel: Channel) => {
@@ -155,8 +157,6 @@ const Index = ({ monetagRef }: IndexProps) => {
     }
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
-    setIsLive(false); // Réinitialiser le statut live pour le nouveau stream
-    setStreamStartsInSeconds(Math.floor(Math.random() * 300) + 60); // Simuler un nouveau compte à rebours entre 1 et 5 minutes
     toast.success(`📺 Chargement de ${channel.name}`);
   };
 
@@ -165,8 +165,6 @@ const Index = ({ monetagRef }: IndexProps) => {
     setTimeout(() => setIsChangingChannel(false), 1500);
     setSelectedChannel(null);
     setStreamUrl(url);
-    setIsLive(false); // Réinitialiser le statut live
-    setStreamStartsInSeconds(Math.floor(Math.random() * 300) + 60); // Simuler un nouveau compte à rebours
     toast.success(`📺 Chargement de l'URL personnalisée`);
   };
 
@@ -182,16 +180,6 @@ const Index = ({ monetagRef }: IndexProps) => {
     localStorage.setItem("favoriteChannels", JSON.stringify(newFavorites));
     toast.success(favorites.includes(channelName) ? `${channelName} retiré des favoris` : `⭐ ${channelName} ajouté aux favoris !`);
   };
-
-  const handleLiveStart = useCallback(() => {
-    setIsLive(true);
-    toast.success("Le live a commencé ! Profitez du spectacle !");
-    monetagRef.current?.sendLiveStartPushNotification(); // Envoyer notification de début de live
-  }, [monetagRef]);
-
-  const handlePreLivePlayClick = useCallback(() => {
-    monetagRef.current?.showPopUnder(); // Déclenche le Pop-under
-  }, [monetagRef]);
 
   const channelListProps = {
     channels,
@@ -224,15 +212,12 @@ const Index = ({ monetagRef }: IndexProps) => {
                   <p className="mt-4 text-white font-semibold">Chargement du flux...</p>
                 </div>
               )}
-              {streamUrl && !isLive ? (
-                <PreLiveEngagement
-                  streamStartsInSeconds={streamStartsInSeconds}
-                  onLiveStart={handleLiveStart}
-                  onPlayClick={handlePreLivePlayClick}
-                  monetagRef={monetagRef}
+              {streamUrl ? (
+                <VideoPlayerVAST 
+                  streamUrl={streamUrl} 
+                  vastUrl="https://frail-benefit.com/dcmuFBz.daGiNHvGZXGuUf/Leym/9DuQZcUKlzk_PBTiYN2nO/D_g/x/OwTqYptQN/jrYC4bOWDEEe5hNKww" // URL VAST d'exemple
+                  autoPlay={userHasInteracted}
                 />
-              ) : streamUrl && isLive ? (
-                <VideoPlayerHybrid streamUrl={streamUrl} autoPlay userHasInteracted={userHasInteracted} />
               ) : (
                 <div className="w-full h-full bg-black flex flex-col items-center justify-center text-center p-8">
                   <div className="flex items-center gap-3 text-muted-foreground animate-pulse">

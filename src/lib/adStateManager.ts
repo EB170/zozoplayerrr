@@ -1,17 +1,14 @@
 "use client";
 
-// Définition des types pour la clarté et la sécurité
 type AdFormat = 'popunder' | 'in_page_push' | 'push_prompt';
 type UserStatus = 'newcomer' | 'engaged' | 'habituated' | 'premium';
 
-// Configuration des règles de capping (en heures)
 const CAPPING_RULES: Record<AdFormat, number> = {
-  popunder: 24,       // 1 Pop-under toutes les 24 heures
-  in_page_push: 2,    // 1 In-Page Push toutes les 2 heures
-  push_prompt: 24,    // 1 Soft Prompt toutes les 24 heures si refusé
+  popunder: 24,
+  in_page_push: 2,
+  push_prompt: 24,
 };
 
-// Configuration des seuils pour le statut utilisateur
 const USER_STATUS_THRESHOLDS = {
   engaged_visits: 2,
   habituated_visits: 6,
@@ -20,16 +17,14 @@ const USER_STATUS_THRESHOLDS = {
 class AdStateManager {
   private visitCount: number = 0;
   private pageViews: number = 0;
+  public adBlockerDetected: boolean = false;
+  private sessionHasSeenPreroll: boolean = false;
 
   constructor() {
     this.init();
   }
 
-  /**
-   * Initialise le suivi de l'utilisateur (visites, pages vues)
-   */
   private init() {
-    // Suivi des visites
     let visitTimestamp = sessionStorage.getItem('visit_timestamp');
     if (!visitTimestamp) {
       sessionStorage.setItem('visit_timestamp', Date.now().toString());
@@ -39,76 +34,70 @@ class AdStateManager {
     } else {
       this.visitCount = parseInt(localStorage.getItem('visit_count') || '1', 10);
     }
-
-    // Suivi des pages vues par session
     this.pageViews = parseInt(sessionStorage.getItem('page_views') || '0', 10) + 1;
     sessionStorage.setItem('page_views', this.pageViews.toString());
   }
 
-  /**
-   * Détermine le statut de l'utilisateur basé sur son historique
-   */
   public getUserStatus(): UserStatus {
-    if (this.isPremium()) {
-      return 'premium';
-    }
-    if (this.visitCount >= USER_STATUS_THRESHOLDS.habituated_visits) {
-      return 'habituated';
-    }
-    if (this.visitCount >= USER_STATUS_THRESHOLDS.engaged_visits) {
-      return 'engaged';
-    }
+    if (this.isPremium()) return 'premium';
+    if (this.visitCount >= USER_STATUS_THRESHOLDS.habituated_visits) return 'habituated';
+    if (this.visitCount >= USER_STATUS_THRESHOLDS.engaged_visits) return 'engaged';
     return 'newcomer';
   }
 
-  /**
-   * Vérifie si un format publicitaire peut être affiché, en fonction du capping et du statut utilisateur
-   */
   public canShow(format: AdFormat): boolean {
-    if (this.isPremium()) {
-      return false; // Jamais de pub pour les Premium
+    const adFreeUntil = parseInt(localStorage.getItem('adFreeUntil') || '0');
+    if (Date.now() < adFreeUntil || this.isPremium()) {
+      return false;
     }
-
+    if (format === 'popunder' && this.sessionHasSeenPreroll) {
+      return false;
+    }
     const userStatus = this.getUserStatus();
-
-    // Logique adaptative
-    switch (format) {
-      case 'popunder':
-        if (userStatus === 'newcomer') return false; // Pas de Pop-under pour les nouveaux
-        break;
-      // D'autres règles pourraient être ajoutées ici
+    if (format === 'popunder' && userStatus === 'newcomer') {
+      return false;
     }
-
-    // Logique de Capping (fréquence)
     const lastShown = localStorage.getItem(`monetag_${format}_timestamp`);
     if (!lastShown) return true;
-
     const hoursElapsed = (Date.now() - parseInt(lastShown, 10)) / 3600000;
     return hoursElapsed > CAPPING_RULES[format];
   }
 
-  /**
-   * Marque un format publicitaire comme ayant été affiché
-   */
   public markAsShown(format: AdFormat) {
     localStorage.setItem(`monetag_${format}_timestamp`, Date.now().toString());
   }
 
-  /**
-   * Vérifie si l'utilisateur a déjà accepté les notifications push
-   */
+  public markSessionPrerollAsSeen() {
+    this.sessionHasSeenPreroll = true;
+  }
+
+  public async detectAdBlocker(): Promise<boolean> {
+    const bait = document.createElement('div');
+    bait.innerHTML = '&nbsp;';
+    bait.className = 'adsbox';
+    bait.style.position = 'absolute';
+    bait.style.left = '-9999px';
+    document.body.appendChild(bait);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (bait.offsetHeight === 0) {
+      this.adBlockerDetected = true;
+    }
+    document.body.removeChild(bait);
+    return this.adBlockerDetected;
+  }
+
+  public grantAdFreePass(durationHours: number) {
+    const adFreeUntil = Date.now() + (durationHours * 60 * 60 * 1000);
+    localStorage.setItem('adFreeUntil', adFreeUntil.toString());
+  }
+
   public hasAcceptedPush(): boolean {
     return 'Notification' in window && Notification.permission === 'granted';
   }
 
-  /**
-   * Vérifie si l'utilisateur est un abonné Premium (logique à adapter)
-   */
   public isPremium(): boolean {
-    // Logique de vérification Premium (ex: cookie, localStorage, appel API)
     return localStorage.getItem('user_premium') === 'true';
   }
 }
 
-// Exporter une instance unique (Singleton) pour toute l'application
 export const adStateManager = new AdStateManager();
