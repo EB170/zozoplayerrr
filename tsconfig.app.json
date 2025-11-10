@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["react", "react-dom", "node"] // Assure que les types React, React-DOM et Node.js sont inclus
+  },
+  "include": ["src", "src/vite-env.d.ts"],
+  "exclude": ["node_modules"]
+}
