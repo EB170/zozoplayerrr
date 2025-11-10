@@ -6,27 +6,12 @@ interface AdGateOverlayProps {
   onUnlock: () => void;
 }
 
-const MONETAG_POP_UNDER_ZONE_ID = '10168808';
-
 const AdGateOverlay = ({ onUnlock }: AdGateOverlayProps) => {
   
   const handleUnlock = () => {
-    // Action 1: Déclencher le Pop-under (la monétisation)
-    try {
-      const scriptId = 'monetag-pop-under-script';
-      if (!document.getElementById(scriptId)) {
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = `//al5sm.com/tag.min.js?z=${MONETAG_POP_UNDER_ZONE_ID}`;
-        script.async = true;
-        script.setAttribute('data-cfasync', 'false');
-        document.body.appendChild(script);
-      }
-    } catch (e) {
-      console.error("[Ad-Gate] Failed to inject Pop-under script:", e);
-    }
-
-    // Action 2: Appeler la fonction de déverrouillage du parent pour cacher l'overlay et lancer la vidéo
+    // Le script pop-under est maintenant pré-chargé par MonetagManager.
+    // Il se déclenchera automatiquement sur ce clic.
+    // Nous n'avons plus besoin d'injecter le script ici.
     onUnlock();
   };
 

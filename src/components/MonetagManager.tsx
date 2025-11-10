@@ -6,6 +6,7 @@ import { adStateManager } from '@/lib/adStateManager';
 
 const MONETAG_IN_PAGE_PUSH_ZONE_ID = '10156178';
 const MONETAG_PUSH_ZONE_ID = '10165926';
+const MONETAG_POP_UNDER_ZONE_ID = '10168808';
 
 interface MonetagManagerRef {
   showInPagePush: () => void;
@@ -38,7 +39,8 @@ const MonetagManager = ({ children }: { children?: React.ReactNode }, ref: React
 
     const idleCallbackOptions = { timeout: 3000 };
 
-    const loadInPagePush = () => {
+    const loadAdScripts = () => {
+      // Load In-Page Push
       if (adStateManager.canShow('in_page_push')) {
         loadScript(
           `//forfrogadiertor.com/tag.min.js?z=${MONETAG_IN_PAGE_PUSH_ZONE_ID}`,
@@ -46,12 +48,20 @@ const MonetagManager = ({ children }: { children?: React.ReactNode }, ref: React
           () => { inPagePushScriptLoaded.current = true; }
         );
       }
+      
+      // Pre-load Pop-under script. It will attach itself to click events automatically.
+      if (adStateManager.canShow('popunder')) {
+         loadScript(
+          `//al5sm.com/tag.min.js?z=${MONETAG_POP_UNDER_ZONE_ID}`,
+          'monetag-pop-under-script'
+        );
+      }
     };
 
     if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(loadInPagePush, idleCallbackOptions);
+      (window as any).requestIdleCallback(loadAdScripts, idleCallbackOptions);
     } else {
-      setTimeout(loadInPagePush, 1000);
+      setTimeout(loadAdScripts, 1000);
     }
   }, [loadScript]);
 
