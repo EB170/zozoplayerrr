@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -12,16 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
 import VideoPlayerHybrid, { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
-import AdGateOverlay from "@/components/AdGateOverlay";
 
 type Channel = Tables<'channels'>;
-
-interface IndexProps {
-  monetagManagerRef: React.RefObject<{
-    showInPagePush: () => void;
-    requestPushNotifications: () => void;
-  }>;
-}
 
 const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onToggleFavorite, favorites, isLoading, layout = 'sidebar' }: { channels: Channel[], selectedChannel: string, onChannelSelect: (channel: Channel) => void, onToggleFavorite: (channelName: string, e: React.MouseEvent) => void, favorites: string[], isLoading: boolean, layout?: 'sidebar' | 'inline' }) => {
   const isSidebar = layout === 'sidebar';
@@ -114,11 +106,10 @@ const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onTogg
 };
 
 
-const Index = ({ monetagManagerRef }: IndexProps) => {
+const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [isLocked, setIsLocked] = useState(true);
   const playerRef = useRef<VideoPlayerRef>(null);
   const queryClient = useQueryClient();
 
@@ -139,34 +130,14 @@ const Index = ({ monetagManagerRef }: IndexProps) => {
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
-    setIsLocked(true);
-    toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
+    toast.info(`▶️ Lancement de ${channel.name}...`);
   };
 
   const handleCustomUrlSubmit = (url: string) => {
     setSelectedChannel(null);
     setStreamUrl(url);
-    setIsLocked(true);
-    toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
+    toast.info(`▶️ Lancement de l'URL personnalisée...`);
   };
-
-  const handleUnlock = useCallback(() => {
-    setIsLocked(false);
-    // Attendre un tick pour que le DOM se mette à jour avant de jouer
-    setTimeout(() => {
-      playerRef.current?.play();
-    }, 100);
-
-    // Déclencher les actifs secondaires après un délai
-    setTimeout(() => {
-      monetagManagerRef.current?.requestPushNotifications();
-    }, 90 * 1000); // 90 secondes pour la demande Push
-
-    setTimeout(() => {
-      monetagManagerRef.current?.showInPagePush();
-    }, 5 * 60 * 1000); // 5 minutes pour l'In-Page Push
-
-  }, [monetagManagerRef]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['channels'] });
@@ -206,9 +177,8 @@ const Index = ({ monetagManagerRef }: IndexProps) => {
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           <div className="w-full md:px-8 md:pt-8 flex-shrink-0">
             <div className="relative w-full aspect-video md:rounded-lg overflow-hidden shadow-glow bg-black">
-              {isLocked && streamUrl && <AdGateOverlay onUnlock={handleUnlock} />}
               {streamUrl ? (
-                <VideoPlayerHybrid ref={playerRef} streamUrl={streamUrl} autoPlay={!isLocked} />
+                <VideoPlayerHybrid ref={playerRef} streamUrl={streamUrl} autoPlay={true} />
               ) : (
                 <div className="w-full h-full bg-black flex flex-col items-center justify-center text-center p-8">
                   <div className="flex items-center gap-3 text-muted-foreground">
