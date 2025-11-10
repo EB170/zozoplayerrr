@@ -1,109 +1,18 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Tv, Star, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Tv, AlertTriangle, Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
-import VideoPlayerHybrid, { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
+import { ChannelList } from "@/components/ChannelList";
+import type { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
+
+const VideoPlayerHybrid = lazy(() => import("@/components/VideoPlayerHybrid"));
 
 type Channel = Tables<'channels'>;
-
-const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onToggleFavorite, favorites, isLoading, layout = 'sidebar' }: { channels: Channel[], selectedChannel: string, onChannelSelect: (channel: Channel) => void, onToggleFavorite: (channelName: string, e: React.MouseEvent) => void, favorites: string[], isLoading: boolean, layout?: 'sidebar' | 'inline' }) => {
-  const isSidebar = layout === 'sidebar';
-
-  const groupedChannels = useMemo(() => {
-    return channels.reduce((acc, channel) => {
-      const provider = channel.provider || 'Autres Chaînes';
-      if (!acc[provider]) acc[provider] = [];
-      acc[provider].push(channel);
-      return acc;
-    }, {} as Record<string, Channel[]>);
-  }, [channels]);
-
-  const favoriteChannels = useMemo(() => channels.filter(c => favorites.includes(c.name)), [channels, favorites]);
-
-  const ChannelListItem = ({ channel }: { channel: Channel }) => (
-    <li
-      onClick={() => onChannelSelect(channel)}
-      className={cn(
-        "flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all duration-200 hover:bg-primary/20",
-        selectedChannel === channel.name ? "bg-primary/20" : "bg-transparent"
-      )}
-    >
-      <div className="w-10 h-10 flex-shrink-0 rounded-md bg-white/5 flex items-center justify-center overflow-hidden">
-        <img src={getLogoForChannel(channel.name)} alt={channel.name} className="max-w-[90%] max-h-[90%] object-contain" />
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <p className="text-sm font-semibold text-foreground truncate">{channel.name}</p>
-        <p className="text-xs text-muted-foreground">{channel.provider}</p>
-      </div>
-      {selectedChannel === channel.name && (
-        <div className="flex items-center gap-1.5 text-red-500">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-          </span>
-          <span className="text-xs font-bold">LIVE</span>
-        </div>
-      )}
-      <button onClick={(e) => onToggleFavorite(channel.name, e)} className="p-1 opacity-50 hover:opacity-100">
-        <Star className={cn("w-4 h-4 transition-colors", favorites.includes(channel.name) ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground")} />
-      </button>
-    </li>
-  );
-
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i}>
-            <Skeleton className="h-6 w-1/2 mb-4 bg-white/10" />
-            {Array.from({ length: 4 }).map((_, j) => (
-              <div key={j} className="flex items-center gap-3 p-2.5">
-                <Skeleton className="w-10 h-10 rounded-md bg-white/10" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4 bg-white/10" />
-                  <Skeleton className="h-3 w-1/2 bg-white/10" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn(
-      "p-4 space-y-6",
-      isSidebar ? "flex-1 overflow-y-auto custom-scrollbar" : ""
-    )}>
-      {favoriteChannels.length > 0 && (
-        <section>
-          <h3 className="text-sm font-semibold text-yellow-400 mb-2 px-2.5 flex items-center gap-2"><Star className="w-4 h-4" /> Favoris</h3>
-          <ul className="space-y-1">
-            {favoriteChannels.map(channel => <ChannelListItem key={channel.id} channel={channel} />)}
-          </ul>
-        </section>
-      )}
-      {Object.entries(groupedChannels).map(([provider, channels]) => (
-        <section key={provider}>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-2 px-2.5">{provider}</h3>
-          <ul className="space-y-1">
-            {channels.map(channel => <ChannelListItem key={channel.id} channel={channel} />)}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
-};
-
 
 const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
@@ -123,37 +32,48 @@ const Index = () => {
 
   useEffect(() => {
     const storedFavorites = localStorage.getItem("favoriteChannels");
-    if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
+    if (storedFavorites) {
+      try {
+        setFavorites(JSON.parse(storedFavorites));
+      } catch (e) {
+        console.error("Failed to parse favorites from localStorage", e);
+        setFavorites([]);
+      }
+    }
   }, []);
 
-  const handleChannelSelect = (channel: Channel) => {
+  const handleChannelSelect = useCallback((channel: Channel) => {
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
     toast.info(`▶️ Lancement de ${channel.name}...`);
-  };
+  }, []);
 
-  const handleCustomUrlSubmit = (url: string) => {
+  const handleCustomUrlSubmit = useCallback((url: string) => {
     setSelectedChannel(null);
     setStreamUrl(url);
     toast.info(`▶️ Lancement de l'URL personnalisée...`);
-  };
+  }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['channels'] });
     toast.info("Liste des chaînes rafraîchie !");
-  };
+  }, [queryClient]);
 
-  const toggleFavorite = (channelName: string, e: React.MouseEvent) => {
+  const toggleFavorite = useCallback((channelName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const newFavorites = favorites.includes(channelName) ? favorites.filter(name => name !== channelName) : [...favorites, channelName];
-    setFavorites(newFavorites);
-    localStorage.setItem("favoriteChannels", JSON.stringify(newFavorites));
-    toast.success(favorites.includes(channelName) ? `${channelName} retiré des favoris` : `⭐ ${channelName} ajouté aux favoris !`);
-  };
+    setFavorites(currentFavorites => {
+      const newFavorites = currentFavorites.includes(channelName)
+        ? currentFavorites.filter(name => name !== channelName)
+        : [...currentFavorites, channelName];
+      localStorage.setItem("favoriteChannels", JSON.stringify(newFavorites));
+      toast.success(currentFavorites.includes(channelName) ? `${channelName} retiré des favoris` : `⭐ ${channelName} ajouté aux favoris !`);
+      return newFavorites;
+    });
+  }, []);
 
   const channelListProps = {
     channels,
-    selectedChannel: selectedChannel?.name || "",
+    selectedChannelName: selectedChannel?.name || "",
     onChannelSelect: handleChannelSelect,
     onToggleFavorite: toggleFavorite,
     favorites,
@@ -170,14 +90,20 @@ const Index = () => {
           <div className="p-4 border-b border-white/10">
             <StreamInput onUrlSubmit={handleCustomUrlSubmit} onRefresh={handleRefresh} />
           </div>
-          <ChannelListContent {...channelListProps} />
+          <ChannelList {...channelListProps} />
         </aside>
         
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           <div className="w-full md:px-8 md:pt-8 flex-shrink-0">
             <div className="relative w-full aspect-video md:rounded-lg overflow-hidden shadow-glow bg-black">
               {streamUrl ? (
-                <VideoPlayerHybrid ref={playerRef} streamUrl={streamUrl} autoPlay={true} />
+                <Suspense fallback={
+                  <div className="w-full h-full flex items-center justify-center bg-black">
+                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                  </div>
+                }>
+                  <VideoPlayerHybrid ref={playerRef} streamUrl={streamUrl} autoPlay={true} />
+                </Suspense>
               ) : (
                 <div className="w-full h-full bg-black flex flex-col items-center justify-center text-center p-8">
                   <div className="flex items-center gap-3 text-muted-foreground">
@@ -199,7 +125,7 @@ const Index = () => {
                 Chaînes Disponibles
               </h2>
               <Card className="bg-card/50">
-                <ChannelListContent {...channelListProps} layout="inline" />
+                <ChannelList {...channelListProps} layout="inline" />
               </Card>
             </div>
 
