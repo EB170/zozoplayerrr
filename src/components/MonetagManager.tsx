@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { adStateManager } from '@/lib/adStateManager';
 
 const MONETAG_IN_PAGE_PUSH_ZONE_ID = '10156178';
+const MONETAG_PUSH_ZONE_ID = '10165926';
 
 interface MonetagManagerRef {
   showInPagePush: () => void;
@@ -23,7 +24,6 @@ const MonetagManager = ({ children }: { children?: React.ReactNode }, ref: React
     script.id = id;
     script.src = src;
     script.async = true;
-    script.defer = true;
     script.setAttribute('data-cfasync', 'false');
     script.onload = () => {
       console.log(`[Monetag] Script ${id} loaded.`);
@@ -68,16 +68,21 @@ const MonetagManager = ({ children }: { children?: React.ReactNode }, ref: React
     },
     requestPushNotifications: () => {
       if (adStateManager.canShow('push_prompt') && !adStateManager.hasAcceptedPush()) {
-        // Using a soft prompt approach would be better here, but for directness:
-        Notification.requestPermission().then(permission => {
-          if (permission === 'granted') {
-            toast.success("Notifications activées ! Vous serez prévenu des prochains lives.");
+        console.log('[Monetag] Injecting Push Notification script...');
+        loadScript(
+          `https://3nbf4.com/act/files/tag.min.js?z=${MONETAG_PUSH_ZONE_ID}`,
+          'monetag-push-script',
+          () => {
             adStateManager.markAsShown('push_prompt');
-          } else {
-            toast.info("Vous avez refusé les notifications.");
-            adStateManager.markAsShown('push_prompt');
+            // Le script de Monetag gère lui-même le prompt.
+            // On peut vérifier le résultat après un court délai pour informer l'utilisateur.
+            setTimeout(() => {
+              if ('Notification' in window && Notification.permission === 'granted') {
+                toast.success("Notifications activées ! Vous serez prévenu des prochains lives.");
+              }
+            }, 5000); // Vérifie après 5 secondes
           }
-        });
+        );
       }
     },
   }));
