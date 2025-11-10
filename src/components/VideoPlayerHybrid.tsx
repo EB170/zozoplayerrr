@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
-import Hls from 'hls.js';
-import mpegts from 'mpegts.js';
-import { detectStreamType, getProxiedUrl } from '@/utils/player';
-import { Loader2 } from 'lucide-react';
+import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { detectStreamType } from '@/utils/player';
+import { Loader2, AlertTriangle, VolumeX } from 'lucide-react';
+import { useHlsPlayer } from '@/hooks/useHlsPlayer';
+import { useMpegtsPlayer } from '@/hooks/useMpegtsPlayer';
+import { usePlayerState } from '@/hooks/usePlayerState';
+import { Button } from './ui/button';
 
 interface VideoPlayerHybridProps {
   streamUrl: string;
@@ -18,70 +20,79 @@ export interface VideoPlayerRef {
 
 const VideoPlayerHybrid = forwardRef<VideoPlayerRef, VideoPlayerHybridProps>(({ streamUrl, autoPlay = false }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<Hls | mpegts.Player | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [userHasInteracted, setUserHasInteracted] = useState(false);
+
+  const {
+    isLoading,
+    isMutedByBrowser,
+    setIsLoading,
+    setIsMuted,
+    setIsMutedByBrowser,
+    unmuteByBrowser,
+  } = usePlayerState(videoRef);
+
+  const streamType = detectStreamType(streamUrl);
+
+  const commonPlayerProps = {
+    videoRef,
+    streamUrl,
+    autoPlay,
+    userHasInteracted,
+    setIsLoading,
+    setErrorMessage,
+    setIsMuted,
+    setIsMutedByBrowser,
+  };
+
+  useHlsPlayer(streamType === 'hls' ? commonPlayerProps : { ...commonPlayerProps, streamUrl: '' });
+  useMpegtsPlayer(streamType === 'mpegts' ? commonPlayerProps : { ...commonPlayerProps, streamUrl: '' });
 
   useEffect(() => {
-    if (!streamUrl || !videoRef.current) return;
-
-    const video = videoRef.current;
-    const type = detectStreamType(streamUrl);
-    const proxiedUrl = getProxiedUrl(streamUrl);
-
-    // Cleanup previous instance
-    if (playerRef.current) {
-      playerRef.current.destroy();
-    }
-
-    setIsLoading(true);
-
-    if (type === 'hls' && Hls.isSupported()) {
-      const hls = new Hls({
-        maxBufferLength: 60, // Buffer agressif
-        maxMaxBufferLength: 120,
-      });
-      hls.loadSource(proxiedUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (autoPlay) video.play();
-      });
-      hls.on(Hls.Events.FRAG_LOADED, () => setIsLoading(false));
-      playerRef.current = hls;
-    } else if (type === 'mpegts' && mpegts.isSupported()) {
-      const mpegtsPlayer = mpegts.createPlayer({ type: 'mpegts', isLive: true, url: proxiedUrl });
-      mpegtsPlayer.attachMediaElement(video);
-      mpegtsPlayer.load();
-      mpegtsPlayer.on(mpegts.Events.MEDIA_INFO, () => {
-        if (autoPlay) mpegtsPlayer.play();
-        setIsLoading(false);
-      });
-      playerRef.current = mpegtsPlayer;
-    }
-
-    return () => {
-      if (playerRef.current) {
-        playerRef.current.destroy();
-      }
+    const handleInteraction = () => {
+      setUserHasInteracted(true);
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
     };
-  }, [streamUrl, autoPlay]);
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('touchstart', handleInteraction);
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
-    play: () => {
-      videoRef.current?.play().catch(e => console.error("Play failed", e));
-    },
-    pause: () => {
-      videoRef.current?.pause();
-    },
+    play: () => videoRef.current?.play().catch(e => console.error("Play failed", e)),
+    pause: () => videoRef.current?.pause(),
   }));
 
   return (
-    <div className="w-full h-full relative bg-black">
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
+    <div className="w-full h-full relative bg-black text-white">
+      <video ref={videoRef} className="w-full h-full" controls playsInline />
+
+      {isLoading && !errorMessage && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-black/50">
           <Loader2 className="w-12 h-12 text-primary animate-spin" />
         </div>
       )}
-      <video ref={videoRef} className="w-full h-full" controls playsInline />
+
+      {errorMessage && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/80 p-4 text-center">
+          <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+          <p className="font-semibold">Erreur de chargement du flux</p>
+          <p className="text-sm text-muted-foreground">{errorMessage}</p>
+        </div>
+      )}
+
+      {isMutedByBrowser && (
+        <div className="absolute top-4 left-4 z-10">
+          <Button onClick={unmuteByBrowser} variant="secondary" size="sm" className="bg-black/50 hover:bg-black/80">
+            <VolumeX className="w-4 h-4 mr-2" />
+            Son désactivé par le navigateur. Cliquez pour réactiver.
+          </Button>
+        </div>
+      )}
     </div>
   );
 });
