@@ -21,6 +21,7 @@ interface IndexProps {
     showPopUnder: () => void;
     showInPagePush: () => void;
     requestPushNotifications: () => void;
+    sendLiveStartPushNotification: () => void; // Ajout de la nouvelle fonction
   }>;
 }
 
@@ -185,9 +186,8 @@ const Index = ({ monetagRef }: IndexProps) => {
   const handleLiveStart = useCallback(() => {
     setIsLive(true);
     toast.success("Le live a commencé ! Profitez du spectacle !");
-    // Ici, vous pourriez envoyer une notification push si l'utilisateur a opt-in
-    // monetagRef.current?.sendLiveStartPushNotification(); // Si une telle fonction existait
-  }, []);
+    monetagRef.current?.sendLiveStartPushNotification(); // Envoyer notification de début de live
+  }, [monetagRef]);
 
   const handlePreLivePlayClick = useCallback(() => {
     monetagRef.current?.showPopUnder(); // Déclenche le Pop-under

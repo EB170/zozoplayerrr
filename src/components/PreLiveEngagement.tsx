@@ -2,35 +2,39 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Tv, BellRing, X, Sparkles } from 'lucide-react';
+import { Loader2, Tv, Sparkles } from 'lucide-react'; // Removed BellRing, X
 import { toast } from 'sonner';
-import { Card } from '@/components/ui/card';
-// import { cn } from '@/lib/utils'; // Removed as 'cn' is not used
-// import { useIsMobile } from '@/hooks/use-mobile'; // Removed as 'isMobile' is not used
+// import { Card } from '@/components/ui/card'; // Removed Card
+import PushNotificationSoftPrompt from './PushNotificationSoftPrompt'; // Import du soft prompt
+// import { cn } from '@/lib/utils'; // Removed cn
 
 interface PreLiveEngagementProps {
   streamStartsInSeconds: number; // Temps restant avant le live
   onLiveStart: () => void; // Callback quand le live commence
-  onPlayClick: () => void; // Callback quand l'utilisateur clique sur "Play"
+  onPlayClick: () => void; // Callback quand l'utilisateur clique sur "Play" (pour Pop-under)
   monetagRef: React.RefObject<{
     showPopUnder: () => void;
     showInPagePush: () => void;
     requestPushNotifications: () => void;
+    sendLiveStartPushNotification: () => void;
   }>;
 }
 
 const PUSH_OPT_IN_DISMISSED_KEY = 'monetag_push_opt_in_dismissed';
+// const PUSH_OPT_IN_ACCEPTED_KEY = 'monetag_push_opt_in_accepted'; // Removed as its value is never read
 const IN_PAGE_PUSH_LAST_SHOWN_KEY = 'monetag_in_page_push_last_shown';
 const IN_PAGE_PUSH_COOLDOWN_HOURS = 2; // Cooldown pour l'In-Page Push
+const PUSH_PROMPT_COOLDOWN_HOURS = 24; // Cooldown pour le soft prompt Push
 
 const PreLiveEngagement = ({ streamStartsInSeconds, onLiveStart, onPlayClick, monetagRef }: PreLiveEngagementProps) => {
   const [remainingSeconds, setRemainingSeconds] = useState(streamStartsInSeconds);
   const [hasClickedPlay, setHasClickedPlay] = useState(false);
-  const [showPushPrompt, setShowPushPrompt] = useState(false);
-  const [showInPagePush, setShowInPagePush] = useState(false);
-  // const isMobile = useIsMobile(); // Removed as 'isMobile' is not used
+  const [showSoftPushPrompt, setShowSoftPushPrompt] = useState(false);
+  const [inPagePushTriggered, setInPagePushTriggered] = useState(false); // Pour IntersectionObserver
+  const [exitIntentTriggered, setExitIntentTriggered] = useState(false); // Pour intention de sortie
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const inPagePushRef = useRef<HTMLDivElement>(null); // Ref pour l'IntersectionObserver
 
   const formatTime = (totalSeconds: number) => {
     const minutes = Math.floor(totalSeconds / 60);
@@ -41,21 +45,22 @@ const PreLiveEngagement = ({ streamStartsInSeconds, onLiveStart, onPlayClick, mo
   const handlePlayButtonClick = useCallback(() => {
     if (!hasClickedPlay) {
       setHasClickedPlay(true);
-      onPlayClick(); // Déclenche le Pop-under via Index.tsx
+      // Déclenchement du Pop-under sur un clic secondaire ou après un délai
+      // Pour l'instant, nous le déclenchons ici comme demandé, mais avec un avertissement.
+      // Une meilleure approche serait un second clic ou un clic sur un élément non-critique.
+      monetagRef.current?.showPopUnder(); // Déclenche le Pop-under
       toast.info("Le live commencera bientôt !");
     }
-  }, [hasClickedPlay, onPlayClick]);
+  }, [hasClickedPlay, monetagRef]);
 
-  const handlePushOptIn = useCallback(() => {
-    monetagRef.current?.requestPushNotifications();
-    localStorage.setItem(PUSH_OPT_IN_DISMISSED_KEY, Date.now().toString()); // Marque comme "tenté"
-    setShowPushPrompt(false);
-    toast.success("Demande de notifications envoyée !");
+  const handleSoftPushAccept = useCallback(() => {
+    setShowSoftPushPrompt(false);
+    monetagRef.current?.requestPushNotifications(); // Déclenche la demande native
   }, [monetagRef]);
 
-  const dismissPushPrompt = useCallback(() => {
+  const handleSoftPushDismiss = useCallback(() => {
+    setShowSoftPushPrompt(false);
     localStorage.setItem(PUSH_OPT_IN_DISMISSED_KEY, Date.now().toString());
-    setShowPushPrompt(false);
     toast.info("Notifications désactivées pour l'instant.");
   }, []);
 
@@ -71,6 +76,7 @@ const PreLiveEngagement = ({ streamStartsInSeconds, onLiveStart, onPlayClick, mo
         if (prev <= 1) {
           clearInterval(timerRef.current!);
           onLiveStart();
+          monetagRef.current?.sendLiveStartPushNotification(); // Envoyer notification de début de live
           return 0;
         }
         return prev - 1;
@@ -80,38 +86,75 @@ const PreLiveEngagement = ({ streamStartsInSeconds, onLiveStart, onPlayClick, mo
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [streamStartsInSeconds, onLiveStart]);
+  }, [streamStartsInSeconds, onLiveStart, monetagRef]);
 
-  // Monetag Timeline Logic
+  // Monetag Timeline Logic & Behavioral Triggers
   useEffect(() => {
-    // T-5 minutes: In-Page Push
-    if (remainingSeconds === 5 * 60 && !showInPagePush) {
-      const lastShown = localStorage.getItem(IN_PAGE_PUSH_LAST_SHOWN_KEY);
-      const now = Date.now();
-      if (!lastShown || (now - parseInt(lastShown)) > IN_PAGE_PUSH_COOLDOWN_HOURS * 60 * 60 * 1000) {
-        // Check if push notifications are already accepted
-        if (!('Notification' in window) || Notification.permission !== 'granted') {
-          setShowInPagePush(true);
-          monetagRef.current?.showInPagePush(); // Trigger In-Page Push
-          localStorage.setItem(IN_PAGE_PUSH_LAST_SHOWN_KEY, now.toString());
-          toast.info("Découvrez plus de contenu !");
+    const now = Date.now();
+    const isPushGranted = ('Notification' in window && Notification.permission === 'granted');
+    const lastPushDismissed = localStorage.getItem(PUSH_OPT_IN_DISMISSED_KEY);
+    const lastInPagePushShown = localStorage.getItem(IN_PAGE_PUSH_LAST_SHOWN_KEY);
+
+    // T-5 minutes: In-Page Push (via IntersectionObserver)
+    // Le déclenchement réel se fera via l'IntersectionObserver sur inPagePushRef
+
+    // T-2 minutes: Native Push Opt-in (via Soft Prompt)
+    if (remainingSeconds === 2 * 60 && !showSoftPushPrompt && !isPushGranted && !exitIntentTriggered) {
+      if (!lastPushDismissed || (now - parseInt(lastPushDismissed)) > PUSH_PROMPT_COOLDOWN_HOURS * 60 * 60 * 1000) {
+        setShowSoftPushPrompt(true);
+      }
+    }
+
+    // Behavioral Trigger: Exit Intent for Push Opt-in
+    const handleMouseLeave = (e: MouseEvent) => {
+      if (e.clientY < 50 && !showSoftPushPrompt && !isPushGranted && !exitIntentTriggered) { // Souris vers le haut de la fenêtre
+        if (!lastPushDismissed || (now - parseInt(lastPushDismissed)) > PUSH_PROMPT_COOLDOWN_HOURS * 60 * 60 * 1000) {
+          setShowSoftPushPrompt(true);
+          setExitIntentTriggered(true); // Pour ne déclencher qu'une fois
+          toast.info("Une dernière chose avant de partir !");
         }
       }
-    }
+    };
 
-    // T-2 minutes: Native Push Opt-in
-    if (remainingSeconds === 2 * 60 && !showPushPrompt) {
-      const lastDismissed = localStorage.getItem(PUSH_OPT_IN_DISMISSED_KEY);
-      const now = Date.now();
-      // Only show if not already granted and not dismissed recently (e.g., within 24h)
-      if (
-        ('Notification' in window && Notification.permission !== 'granted') &&
-        (!lastDismissed || (now - parseInt(lastDismissed)) > 24 * 60 * 60 * 1000) // Cooldown 24h
-      ) {
-        setShowPushPrompt(true);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    return () => {
+      document.removeEventListener('mouseleave', handleMouseLeave);
+    };
+  }, [remainingSeconds, showSoftPushPrompt, exitIntentTriggered, monetagRef]);
+
+  // IntersectionObserver for In-Page Push
+  useEffect(() => {
+    const now = Date.now();
+    const isPushGranted = ('Notification' in window && Notification.permission === 'granted');
+    const lastInPagePushShown = localStorage.getItem(IN_PAGE_PUSH_LAST_SHOWN_KEY);
+
+    if (!inPagePushRef.current || inPagePushTriggered || isPushGranted) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !inPagePushTriggered && !isPushGranted) {
+            if (!lastInPagePushShown || (now - parseInt(lastInPagePushShown)) > IN_PAGE_PUSH_COOLDOWN_HOURS * 60 * 60 * 1000) {
+              monetagRef.current?.showInPagePush();
+              localStorage.setItem(IN_PAGE_PUSH_LAST_SHOWN_KEY, now.toString());
+              setInPagePushTriggered(true);
+              toast.info("Découvrez plus de contenu !");
+            }
+          }
+        });
+      },
+      { threshold: 0.5 } // Déclenche quand 50% de l'élément est visible
+    );
+
+    observer.observe(inPagePushRef.current);
+
+    return () => {
+      if (inPagePushRef.current) {
+        observer.unobserve(inPagePushRef.current);
       }
-    }
-  }, [remainingSeconds, monetagRef, showInPagePush, showPushPrompt]);
+    };
+  }, [inPagePushTriggered, monetagRef]);
+
 
   if (remainingSeconds <= 0) {
     return null; // Le live a commencé, ce composant n'est plus nécessaire
@@ -134,35 +177,24 @@ const PreLiveEngagement = ({ streamStartsInSeconds, onLiveStart, onPlayClick, mo
           {hasClickedPlay ? (
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
           ) : (
-            <Sparkles className="w-6 h-6 mr-2" />
+            <Sparkles className="w-6 h-6 mr-2 animate-pulse" />
           )}
           {hasClickedPlay ? "En attente..." : "Lancer l'attente"}
         </Button>
       </div>
 
-      {/* Prompt pour les notifications Push (T-2 min) */}
-      {showPushPrompt && (
-        <Card className="fixed bottom-4 right-4 bg-card border border-primary/50 shadow-lg p-4 max-w-xs text-center space-y-3 animate-in slide-in-from-bottom-4 duration-300 z-[60]">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-            onClick={dismissPushPrompt}
-          >
-            <X className="w-4 h-4" />
-          </Button>
-          <BellRing className="w-8 h-8 text-primary mx-auto animate-bounce-slow" />
-          <p className="font-semibold text-foreground text-base">
-            Ne manquez pas le coup d'envoi !
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Recevez une notification dès que le live commence.
-          </p>
-          <Button onClick={handlePushOptIn} className="w-full bg-primary hover:bg-primary/90 text-sm">
-            Oui, je veux être notifié !
-          </Button>
-        </Card>
-      )}
+      {/* Placeholder pour l'In-Page Push (garantie CLS) */}
+      {/* Cet élément sera observé par IntersectionObserver pour déclencher l'In-Page Push */}
+      <div ref={inPagePushRef} className="mt-12 w-full max-w-md mx-auto bg-transparent" style={{ minHeight: '120px' }}>
+        {/* Le script Monetag injectera ici son contenu */}
+      </div>
+
+      {/* Soft Prompt pour les notifications Push */}
+      <PushNotificationSoftPrompt
+        isVisible={showSoftPushPrompt}
+        onAccept={handleSoftPushAccept}
+        onDismiss={handleSoftPushDismiss}
+      />
     </div>
   );
 };
