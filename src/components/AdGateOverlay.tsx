@@ -1,7 +1,6 @@
 "use client";
 
 import { Play } from 'lucide-react';
-import { adStateManager } from '@/lib/adStateManager';
 
 interface AdGateOverlayProps {
   onUnlock: () => void;
@@ -27,10 +26,7 @@ const AdGateOverlay = ({ onUnlock }: AdGateOverlayProps) => {
       console.error("[Ad-Gate] Failed to inject Pop-under script:", e);
     }
 
-    // Action 2: Donner le "pass" de 12h à l'utilisateur
-    adStateManager.grantAdGatePass(12);
-
-    // Action 3: Appeler la fonction de déverrouillage du parent pour cacher l'overlay et lancer la vidéo
+    // Action 2: Appeler la fonction de déverrouillage du parent pour cacher l'overlay et lancer la vidéo
     onUnlock();
   };
 

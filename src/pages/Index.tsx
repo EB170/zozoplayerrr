@@ -13,7 +13,6 @@ import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
 import VideoPlayerHybrid, { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
 import AdGateOverlay from "@/components/AdGateOverlay";
-import { adStateManager } from "@/lib/adStateManager";
 
 type Channel = Tables<'channels'>;
 
@@ -140,26 +139,15 @@ const Index = ({ monetagManagerRef }: IndexProps) => {
   const handleChannelSelect = (channel: Channel) => {
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
-    // Vérifier si l'utilisateur a un pass valide. Si oui, on déverrouille direct.
-    if (adStateManager.hasValidAdGatePass()) {
-      setIsLocked(false);
-      toast.info("Accès direct grâce à votre pass !");
-    } else {
-      setIsLocked(true);
-      toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
-    }
+    setIsLocked(true);
+    toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
   };
 
   const handleCustomUrlSubmit = (url: string) => {
     setSelectedChannel(null);
     setStreamUrl(url);
-    if (adStateManager.hasValidAdGatePass()) {
-      setIsLocked(false);
-      toast.info("Accès direct grâce à votre pass !");
-    } else {
-      setIsLocked(true);
-      toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
-    }
+    setIsLocked(true);
+    toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
   };
 
   const handleUnlock = useCallback(() => {

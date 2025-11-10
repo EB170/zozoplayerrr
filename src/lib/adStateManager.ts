@@ -92,16 +92,6 @@ class AdStateManager {
     localStorage.setItem('adFreeUntil', adFreeUntil.toString());
   }
 
-  public grantAdGatePass(durationHours: number = 12) {
-    const passExpiresAt = Date.now() + (durationHours * 60 * 60 * 1000);
-    localStorage.setItem('adGatePassExpiresAt', passExpiresAt.toString());
-  }
-
-  public hasValidAdGatePass(): boolean {
-    const passExpiresAt = parseInt(localStorage.getItem('adGatePassExpiresAt') || '0');
-    return Date.now() < passExpiresAt;
-  }
-
   public hasAcceptedPush(): boolean {
     return 'Notification' in window && Notification.permission === 'granted';
   }
