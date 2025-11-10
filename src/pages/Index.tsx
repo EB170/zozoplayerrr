@@ -163,7 +163,7 @@ const Index = () => {
   return (
     <div className="h-screen w-screen bg-background flex flex-col">
       <header className="flex items-center justify-center py-3 px-4 md:px-0 border-b border-white/10 bg-card/30 backdrop-blur-xl z-10 flex-shrink-0">
-        <img src="/favicon.png" alt="ZozoPlayer" className="h-10" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.5))' }} />
+        <img src="/logo.png" alt="ZozoPlayer" className="h-10" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.5))' }} />
       </header>
       <div className="flex flex-1 overflow-hidden">
         <aside className="hidden md:flex flex-col w-80 lg:w-96 bg-card/50 backdrop-blur-xl border-r border-white/10">
