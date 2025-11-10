@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Tv, Loader2, Star, AlertTriangle } from "lucide-react";
+import { Tv, Star, AlertTriangle } from "lucide-react";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,17 +11,12 @@ import { Tables } from "@/integrations/supabase/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoForChannel } from "@/config/logo-map";
 import { StreamInput } from "@/components/StreamInput";
-import VideoPlayerVAST from "@/components/VideoPlayerVAST"; // Nouveau lecteur
-import { adStateManager } from "@/lib/adStateManager";
+import VideoPlayerHybrid, { VideoPlayerRef } from "@/components/VideoPlayerHybrid";
+import AdGateOverlay from "@/components/AdGateOverlay";
 
 type Channel = Tables<'channels'>;
 
-interface IndexProps {
-  monetagRef: React.RefObject<{
-    requestPushNotifications: () => void;
-  }>;
-}
-
+// The ChannelListContent component remains unchanged...
 const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onToggleFavorite, favorites, isLoading, layout = 'sidebar' }: { channels: Channel[], selectedChannel: string, onChannelSelect: (channel: Channel) => void, onToggleFavorite: (channelName: string, e: React.MouseEvent) => void, favorites: string[], isLoading: boolean, layout?: 'sidebar' | 'inline' }) => {
   const isSidebar = layout === 'sidebar';
 
@@ -112,12 +107,13 @@ const ChannelListContent = ({ channels, selectedChannel, onChannelSelect, onTogg
   );
 };
 
-const Index = ({ monetagRef }: IndexProps) => {
+
+const Index = () => {
   const [streamUrl, setStreamUrl] = useState("");
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [isChangingChannel, setIsChangingChannel] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [userHasInteracted, setUserHasInteracted] = useState(false);
+  const [isLocked, setIsLocked] = useState(true);
+  const playerRef = useRef<VideoPlayerRef>(null);
   const queryClient = useQueryClient();
 
   const { data: channels = [], isLoading, isError, refetch } = useQuery({
@@ -132,41 +128,26 @@ const Index = ({ monetagRef }: IndexProps) => {
   useEffect(() => {
     const storedFavorites = localStorage.getItem("favoriteChannels");
     if (storedFavorites) setFavorites(JSON.parse(storedFavorites));
-
-    // Détection d'Ad-Blocker au chargement de la page
-    adStateManager.detectAdBlocker().then(detected => {
-      if (detected && adStateManager.canShow('push_prompt')) {
-        toast.info("Pour soutenir le site, pensez à activer les notifications !", {
-          action: {
-            label: "Activer",
-            onClick: () => monetagRef.current?.requestPushNotifications(),
-          },
-        });
-      }
-    });
-  }, [monetagRef]);
-
-  const handleFirstInteraction = useCallback(() => {
-    if (!userHasInteracted) setUserHasInteracted(true);
-  }, [userHasInteracted]);
+  }, []);
 
   const handleChannelSelect = (channel: Channel) => {
-    if (selectedChannel?.name !== channel.name) {
-      setIsChangingChannel(true);
-      setTimeout(() => setIsChangingChannel(false), 1500);
-    }
     setSelectedChannel(channel);
     setStreamUrl(channel.urls[0]);
-    toast.success(`📺 Chargement de ${channel.name}`);
+    setIsLocked(true); // Verrouiller à chaque changement de chaîne
+    toast.success(`📺 ${channel.name} prêt. Cliquez pour déverrouiller.`);
   };
 
   const handleCustomUrlSubmit = (url: string) => {
-    setIsChangingChannel(true);
-    setTimeout(() => setIsChangingChannel(false), 1500);
     setSelectedChannel(null);
     setStreamUrl(url);
-    toast.success(`📺 Chargement de l'URL personnalisée`);
+    setIsLocked(true);
+    toast.success(`📺 URL personnalisée prête. Cliquez pour déverrouiller.`);
   };
+
+  const handleUnlock = useCallback(() => {
+    setIsLocked(false);
+    playerRef.current?.play();
+  }, []);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['channels'] });
@@ -191,7 +172,7 @@ const Index = ({ monetagRef }: IndexProps) => {
   };
 
   return (
-    <div className="h-screen w-screen bg-background flex flex-col" onClick={handleFirstInteraction} onTouchStart={handleFirstInteraction}>
+    <div className="h-screen w-screen bg-background flex flex-col">
       <header className="flex items-center justify-center py-3 px-4 md:px-0 border-b border-white/10 bg-card/30 backdrop-blur-xl z-10 flex-shrink-0">
         <img src="/logo.png" alt="ZozoPlayer" className="h-10" style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.5))' }} />
       </header>
@@ -206,27 +187,15 @@ const Index = ({ monetagRef }: IndexProps) => {
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
           <div className="w-full md:px-8 md:pt-8 flex-shrink-0">
             <div className="relative w-full aspect-video md:rounded-lg overflow-hidden shadow-glow bg-black">
-              {isChangingChannel && (
-                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 animate-in fade-in duration-300">
-                  <Loader2 className="w-12 h-12 animate-spin text-primary" />
-                  <p className="mt-4 text-white font-semibold">Chargement du flux...</p>
-                </div>
-              )}
+              {isLocked && streamUrl && <AdGateOverlay onUnlock={handleUnlock} />}
               {streamUrl ? (
-                <VideoPlayerVAST 
-                  streamUrl={streamUrl} 
-                  vastUrl="https://frail-benefit.com/dcmuFBz.daGiNHvGZXGuUf/Leym/9DuQZcUKlzk_PBTiYN2nO/D_g/x/OwTqYptQN/jrYC4bOWDEEe5hNKww" // URL VAST d'exemple
-                  autoPlay={userHasInteracted}
-                />
+                <VideoPlayerHybrid ref={playerRef} streamUrl={streamUrl} autoPlay={!isLocked} />
               ) : (
                 <div className="w-full h-full bg-black flex flex-col items-center justify-center text-center p-8">
-                  <div className="flex items-center gap-3 text-muted-foreground animate-pulse">
+                  <div className="flex items-center gap-3 text-muted-foreground">
                     <Tv className="w-8 h-8" />
-                    <p className="text-xl font-semibold">En attente de sélection d'un flux...</p>
+                    <p className="text-xl font-semibold">Sélectionnez un flux pour commencer</p>
                   </div>
-                  <p className="text-muted-foreground/80 mt-4 max-w-md mx-auto">
-                    Choisissez une chaîne ou entrez une URL pour démarrer la lecture.
-                  </p>
                 </div>
               )}
             </div>
