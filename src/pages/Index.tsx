@@ -3,7 +3,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tv, Star, AlertTriangle } from "lucide-react";
-import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import { cn } from "@/lib/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -215,7 +214,6 @@ const Index = () => {
           </main>
         </div>
       </div>
-      <PWAInstallPrompt />
     </div>
   );
 };
